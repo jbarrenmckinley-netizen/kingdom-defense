@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Kingdom Defense — Shy-Rian</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.hidden{display:none!important}
+body{font-family:Georgia,serif;background:#0a1a12;color:#f4ecd8;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
+#game{position:relative;width:100vw;height:100vh;max-width:500px;max-height:900px;background:#0d1f17;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;display:flex;justify-content:space-between;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#d4af37;z-index:10;pointer-events:none}
+#hud .l,#hud .r{display:flex;flex-direction:column;gap:3px}#hud .r{text-align:right}
+.val{color:#f4ecd8;font-size:17px;font-weight:bold}
+#hearts{font-size:17px;letter-spacing:2px;color:#c0392b}
+#powerStatus{font-size:10px;color:#7ba894}
+.screen{position:absolute;inset:0;background:rgba(10,26,18,.98);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;text-align:center;z-index:20;overflow-y:auto}
+.screen::before,.screen::after{content:"";margin:auto}
+h1{font-size:28px;color:#d4af37;margin-bottom:6px;letter-spacing:3px}
+h2{font-size:13px;color:#7ba894;margin-bottom:20px;letter-spacing:2px;text-transform:uppercase;font-weight:normal}
+.sub{font-size:12px;color:#7ba894;margin-bottom:18px;letter-spacing:1px;line-height:1.6;max-width:340px}
+.char-select{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;justify-content:center}
+.char-btn{background:#142a1e;border:2px solid #2a4a38;border-radius:12px;padding:12px 14px;color:#f4ecd8;font-family:inherit;font-size:12px;cursor:pointer;min-width:88px}
+.char-btn.active{border-color:#d4af37;background:#1d3a28}
+.char-btn .name{color:#d4af37;font-weight:bold;display:block;margin-bottom:3px;font-size:13px}
+.char-btn .role{color:#7ba894;font-size:9px;text-transform:uppercase}
+.btn{background:#d4af37;color:#0d1f17;border:none;border-radius:10px;padding:13px 32px;font-family:inherit;font-size:14px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin:5px}
+.btn.secondary{background:transparent;color:#d4af37;border:2px solid #d4af37}
+.stat{font-size:14px;margin:5px 0}.stat .k{color:#7ba894;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.stat .v{color:#d4af37;font-weight:bold;font-size:20px;display:block;margin-top:2px}
+.item,.powerup{background:#142a1e;border:1px solid #2a4a38;border-radius:10px;padding:13px 18px;margin:6px 0;width:290px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;text-align:left;font-size:12px}
+.item:active,.powerup:active{border-color:#d4af37;background:#1d3a28}
+.cost{color:#d4af37;font-weight:bold}
+.ptitle{color:#d4af37;font-weight:bold;font-size:13px;margin-bottom:3px}.pdesc{color:#7ba894;font-size:10px;line-height:1.4}
+.pbuy{background:#d4af37;color:#0d1f17;padding:6px 12px;border-radius:6px;font-weight:bold;font-size:11px;margin-left:10px}
+.adSlot{width:290px;height:80px;background:linear-gradient(135deg,#142a1e,#1d3a28);border:2px solid #d4af37;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:12px 0;cursor:pointer;position:relative;color:#d4af37}
+.adSlot .brand{font-size:16px;font-weight:bold;letter-spacing:4px;margin-bottom:4px}
+.adSlot .tagline{color:#7ba894;font-size:10px;letter-spacing:1px}
+.adSlot .label{position:absolute;top:4px;right:6px;font-size:8px;color:#7ba894}
+.card{background:linear-gradient(135deg,#1d3a28,#142a1e);border:2px solid #d4af37;border-radius:12px;padding:14px 20px;margin:10px 0;width:290px}
+.card .reward{color:#d4af37;font-size:22px;font-weight:bold;margin:4px 0}
+.note{font-size:10px;color:#7ba894;line-height:1.5;margin:6px 0 10px;max-width:290px}
+.bar{width:100%;height:8px;background:#142a1e;border-radius:4px;overflow:hidden;margin:10px 0 4px;border:1px solid #2a4a38}
+.fill{height:100%;background:linear-gradient(90deg,#7ba894,#d4af37);transition:width .4s}
+input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #2a4a38;background:#142a1e;color:#f4ecd8;font-family:inherit;font-size:14px}
+#toast{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,26,18,.95);border:2px solid #d4af37;padding:16px 28px;border-radius:12px;font-size:14px;text-align:center;z-index:30;opacity:0;transition:opacity .3s;pointer-events:none;max-width:300px;line-height:1.5}
+#toast.show{opacity:1}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body>
+<div id="game">
+<canvas id="c"></canvas>
+<div id="hud">
+  <div class="l"><div>Points <span class="val" id="points">0</span></div><div id="hearts">♥♥♥</div><div id="powerStatus"></div></div>
+  <div class="r"><div>Balance <span class="val" id="balance">$0.00</span></div><div style="font-size:9px">1000 pts = $1</div></div>
+</div>
+
+<div id="boot" class="screen">
+  <h1>KINGDOM DEFENSE</h1><h2>Shy-Rian · Land of Provision</h2>
+  <div class="sub" id="bootMsg">Connecting to the Kingdom…</div>
+  <button class="btn hidden" id="retry">Retry</button>
+</div>
+
+<div id="menu" class="screen hidden">
+  <h1>KINGDOM DEFENSE</h1><h2>Shy-Rian · Land of Provision</h2>
+  <div class="sub">Choose your guardian. Hold the line. Earn $50 and cash out.</div>
+  <div class="char-select">
+    <button class="char-btn active" data-char="king"><span class="name">King</span><span class="role">Rider</span></button>
+    <button class="char-btn" data-char="buddha"><span class="name">Buddha</span><span class="role">Shield</span></button>
+    <button class="char-btn" data-char="matthias"><span class="name">Matthias</span><span class="role">Enforcer</span></button>
+  </div>
+  <div id="daily" class="card hidden">
+    <div class="note" style="margin:0">DAILY KINGDOM BLESSING</div>
+    <div class="reward">+1,000 pts</div>
+    <button class="btn" id="claimDaily" style="padding:8px 20px;font-size:12px">Claim</button>
+  </div>
+  <div class="note" id="firstRuns"></div>
+  <button class="btn" id="start">Enter the Line</button>
+  <button class="btn secondary" id="openShop">Cash Out</button>
+  <button class="btn secondary" id="openPower">Power-Ups</button>
+  <div class="card">
+    <div class="note" style="margin:0">BECOME A FOUNDING CITIZEN</div>
+    <div class="reward" style="font-size:15px">SIG #PH4401 · First 100 pairs</div>
+    <div class="bar"><div class="fill" id="gfmBar"></div></div>
+    <div class="note" id="gfmText" style="margin-bottom:8px"></div>
+    <button class="btn gfm" style="padding:9px 20px;font-size:12px">Fuel the Kingdom</button>
+  </div>
+</div>
+
+<div id="shop" class="screen hidden">
+  <h1>CASH OUT</h1><h2>Kingdom Rewards</h2>
+  <div class="stat"><span class="k">Your Balance</span><span class="v" id="shopBalance">$0.00</span></div>
+  <div class="card" style="padding:4px 20px 8px;border:none;background:none"><div class="bar"><div class="fill" id="shopProgress" style="width:0"></div></div></div>
+  <div class="note">Progress to $50.00 cash payout</div>
+  <div class="item" id="cashItem"><span>$50 Cash Payout</span><span class="cost">$50</span></div>
+  <div class="note">$50 minimum and at least 10 runs played. Sent to Cash App, PayPal, Venmo or Chime. Requests are reviewed within 3–5 business days. Power-ups are bought from your balance.</div>
+  <div class="adSlot" onclick="watchAd()"><div class="label">AD</div><div class="brand">ECHELON</div><div class="tagline">Watch 30s · Earn +25 pts (5/day)</div></div>
+  <button class="btn" onclick="showScreen('menu')">Back</button>
+</div>
+
+<div id="payout" class="screen hidden">
+  <h1>CASH OUT</h1><h2>$50 Payout</h2>
+  <select id="method"><option>Cash App</option><option>PayPal</option><option>Venmo</option><option>Chime</option></select>
+  <input id="handle" placeholder="Your $cashtag / email / @username" autocomplete="off">
+  <div class="note">$50 is deducted from your balance when you submit. Double-check your handle; payouts can't be redirected.</div>
+  <button class="btn" id="submitPayout">Submit Request</button>
+  <button class="btn secondary" onclick="showScreen('shop')">Back</button>
+</div>
+
+<div id="power" class="screen hidden">
+  <h1>POWER-UPS</h1><h2>Kingdom Armory</h2>
+  <div class="stat"><span class="k">Your Balance</span><span class="v" id="powerBalance">$0.00</span></div>
+  <div class="note" id="owned"></div>
+  <div class="note">Bought with your earned balance, not real money. Used automatically in your next run.</div>
+  <div class="powerup" data-power="rapid"><div><div class="ptitle">Rapid Fire</div><div class="pdesc">Auto-fire for 60 seconds of play.</div></div><div class="pbuy">$0.99</div></div>
+  <div class="powerup" data-power="shield"><div><div class="ptitle">Shield of Buddha</div><div class="pdesc">Absorbs 3 hits.</div></div><div class="pbuy">$1.99</div></div>
+  <div class="powerup" data-power="double"><div><div class="ptitle">Double Points</div><div class="pdesc">2x points for one run.</div></div><div class="pbuy">$1.49</div></div>
+  <div class="powerup" data-power="revive"><div><div class="ptitle">Revive Token</div><div class="pdesc">Continue once after losing all lives.</div></div><div class="pbuy">$2.99</div></div>
+  <button class="btn" onclick="showScreen('menu')">Back</button>
+</div>
+
+<div id="over" class="screen hidden">
+  <h1>THE LINE HELD</h1><h2>Well fought, guardian</h2>
+  <div class="stat"><span class="k">Points This Run</span><span class="v" id="runPoints">0</span></div>
+  <div class="stat"><span class="k">Total Balance</span><span class="v" id="finalBalance">$0.00</span></div>
+  <div class="adSlot" onclick="watchAd()"><div class="label">AD</div><div class="brand">ECHELON</div><div class="tagline">Watch 30s · Earn +25 pts (5/day)</div></div>
+  <div><button class="btn" id="again">Fight Again</button><button class="btn secondary" onclick="showScreen('menu')">Menu</button></div>
+  <button class="btn secondary gfm" style="padding:9px 20px;font-size:12px">Fuel the Kingdom</button>
+</div>
+<div id="toast"></div>
+</div>
+
+<script>
+// ===== CONFIG: edit these =====
+const SUPABASE_URL='https://hvqrmhcjylftrukelwjq.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2cXJtaGNqeWxmdHJ1a2Vsd2pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4OTYyMzAsImV4cCI6MjEwNjQ3MjIzMH0.7GoUEy4QhoXws8t5dPelZlgAU2gfFPbzN8PK6KEmgio'; // public anon key
+const GOFUNDME_URL='https://gofund.me/9b38de584';
+const GFM_RAISED=0, GFM_GOAL=10000; // update RAISED by hand
+// ==============================
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+const c=$('c'),ctx=c.getContext('2d');
+let W,H;
+function resize(){const r=c.getBoundingClientRect();c.width=r.width*devicePixelRatio;c.height=r.height*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);W=r.width;H=r.height}
+window.addEventListener('resize',resize);
+
+let P=null,state='boot',chosenChar='king',player,bullets=[],enemies=[],particles=[],score=0,lives=3,spawnTimer,lastTime,mouse,toastT,adBusy=false,inv={shield:0,revive:0},shieldHits=0;
+let buffs={rapid:0,double:0};
+const chars={king:{color:'#40E0D0',accent:'#008080'},buddha:{color:'#2a4a38',accent:'#d4af37'},matthias:{color:'#1a1a1a',accent:'#8b0000'}};
+const usd=p=>(p/1000).toFixed(2);
+const bal=()=>P?P.points/1000:0;
+function showToast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400)}
+async function rpc(fn,args){
+  const {data,error}=await sb.rpc(fn,args||{});
+  if(error){showToast(error.message);return null}
+  P=data;return data;
+}
+const mult=()=>(buffs.double>0||(P&&P.runs<3))?2:1;
+
+function showScreen(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  if(n!=='game')$(n).classList.remove('hidden');
+  state=n==='game'?'playing':n;
+  if(n==='menu')updateMenu();
+  if(n==='shop')updateShop();
+  if(n==='power')updatePower();
+  updateHUD();
+}
+function updateMenu(){
+  $('daily').classList.toggle('hidden',!!P.last_daily&&Date.now()-new Date(P.last_daily)<864e5);
+  const left=3-P.runs;
+  $('firstRuns').textContent=left>0?'Starter boost: 2x points on your next '+left+' run'+(left>1?'s':''):'';
+  $('gfmBar').style.width=Math.min(100,GFM_RAISED/GFM_GOAL*100)+'%';
+  $('gfmText').textContent='$'+GFM_RAISED.toLocaleString()+' of $'+GFM_GOAL.toLocaleString()+' raised';
+}
+function updateShop(){$('shopBalance').textContent='$'+usd(P.points);$('shopProgress').style.width=Math.min(100,bal()/50*100)+'%'}
+function updatePower(){
+  $('powerBalance').textContent='$'+usd(P.points);
+  $('owned').textContent='Owned: Rapid x'+P.inv_rapid+' · Shield x'+P.inv_shield+' · Double x'+P.inv_double+' · Revive x'+P.inv_revive;
+}
+function updateHUD(){
+  if(!P)return;
+  $('points').textContent=score;
+  $('balance').textContent='$'+usd(P.points+(state==='playing'?score:0));
+  $('hearts').textContent='♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,3-lives));
+  const a=[];
+  if(buffs.rapid>0)a.push('RAPID');
+  if(state==='playing'&&mult()===2)a.push('2x');
+  if(shieldHits>0)a.push('SHIELD x'+shieldHits);
+  if(inv.revive>0)a.push('REVIVE');
+  $('powerStatus').textContent=a.join(' · ');
+}
+function openGFM(){window.open(GOFUNDME_URL,'_blank','noopener')}
+document.querySelectorAll('.gfm').forEach(b=>b.onclick=openGFM);
+
+async function startRun(){
+  showScreen('game');resize();
+  player={x:W/2,y:H-80,r:22};bullets=[];enemies=[];particles=[];score=0;lives=3;spawnTimer=0;
+  buffs={rapid:0,double:0};shieldHits=0;inv={shield:P.inv_shield,revive:P.inv_revive};
+  lastTime=performance.now();mouse={x:W/2,y:H-80,down:false};
+  const owned={rapid:P.inv_rapid>0,double:P.inv_double>0};
+  if(owned.rapid){buffs.rapid=60;rpc('use_powerup',{p_kind:'rapid'})}
+  if(owned.double){buffs.double=1;rpc('use_powerup',{p_kind:'double'})}
+  updateHUD();
+}
+function spawnEnemy(){
+  const t=['drone','shadow','runner'][Math.floor(Math.random()*3)];
+  enemies.push({x:Math.random()*(W-60)+30,y:-30,vy:t==='runner'?2.5:t==='drone'?1.2:1.6,vx:t==='shadow'?(Math.random()-.5)*1.5:0,r:t==='drone'?18:t==='shadow'?24:16,type:t,hp:t==='shadow'?2:1,points:t==='runner'?50:t==='shadow'?120:80,wobble:Math.random()*6.28});
+}
+function shoot(x,y){const dx=x-player.x,dy=y-player.y,l=Math.hypot(dx,dy)||1;bullets.push({x:player.x,y:player.y-15,vx:dx/l*12,vy:dy/l*12,life:60,r:4})}
+function burst(x,y,color,n){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=Math.random()*4+1;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:30,color,r:Math.random()*3+1})}}
+function loop(now){
+  const dt=Math.min((now-lastTime)/16.67,2);lastTime=now;
+  if(state==='playing')update(dt);
+  draw();requestAnimationFrame(loop);
+}
+function update(dt){
+  player.x+=(mouse.x-player.x)*.25*dt;player.y+=(mouse.y-player.y)*.25*dt;
+  player.x=Math.max(30,Math.min(W-30,player.x));player.y=Math.max(H/2,Math.min(H-30,player.y));
+  if(buffs.rapid>0){buffs.rapid=Math.max(0,buffs.rapid-dt/60);if(buffs.rapid===0)updateHUD()}
+  if(mouse.down)shoot(mouse.x,mouse.y);
+  if(buffs.rapid>0&&Math.random()<.4)shoot(player.x,player.y-100);
+  spawnTimer-=dt;
+  if(spawnTimer<=0){spawnEnemy();spawnTimer=Math.max(18,55-score/150)}
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
+    if(b.life<=0||b.x<0||b.x>W||b.y<0||b.y>H){bullets.splice(i,1);continue}
+    for(let j=enemies.length-1;j>=0;j--){
+      const e=enemies[j];
+      if(Math.hypot(b.x-e.x,b.y-e.y)<e.r+b.r){
+        e.hp--;burst(b.x,b.y,'#d4af37',6);bullets.splice(i,1);
+        if(e.hp<=0){score+=e.points*mult();burst(e.x,e.y,chars[chosenChar].color,14);enemies.splice(j,1);updateHUD()}
+        break;
+      }
+    }
+  }
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];e.wobble+=.1*dt;e.y+=e.vy*dt;e.x+=(e.vx+Math.sin(e.wobble)*.8)*dt;
+    e.x=Math.max(e.r,Math.min(W-e.r,e.x));
+    if(e.y>H-40){
+      if(shieldHits===0&&inv.shield>0){inv.shield--;shieldHits=3;rpc('use_powerup',{p_kind:'shield'})}
+      if(shieldHits>0){shieldHits--;burst(e.x,H-40,'#d4af37',30);showToast('Shield absorbed the hit!')}
+      else{lives--;burst(e.x,H-40,'#8b0000',20)}
+      enemies.splice(i,1);updateHUD();
+      if(lives<=0){
+        if(inv.revive>0){inv.revive--;rpc('use_powerup',{p_kind:'revive'});lives=3;showToast('Revived!');updateHUD()}
+        else{endGame();return}
+      }
+    }
+  }
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.15*dt;p.life-=dt;p.vx*=.97;
+    if(p.life<=0)particles.splice(i,1);
+  }
+}
+function draw(){
+  ctx.fillStyle='#0d1f17';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(42,74,56,.4)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  ctx.strokeStyle='#d4af37';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,H-30);ctx.lineTo(W,H-30);ctx.stroke();
+  if(!player)return;
+  for(const p of particles){ctx.globalAlpha=p.life/30;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.fill()}
+  ctx.globalAlpha=1;
+  for(const b of bullets){ctx.fillStyle='#f4ecd8';ctx.shadowBlur=12;ctx.shadowColor=chars[chosenChar].color;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,6.28);ctx.fill();ctx.shadowBlur=0}
+  for(const e of enemies){
+    ctx.fillStyle=e.type==='shadow'?'#3a0d0d':e.type==='runner'?'#4a1a1a':'#1f1f1f';
+    ctx.strokeStyle='#8b0000';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,6.28);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#c0392b';ctx.beginPath();ctx.arc(e.x,e.y,e.r*.35,0,6.28);ctx.fill();
+  }
+  const col=chars[chosenChar];
+  ctx.shadowBlur=20;ctx.shadowColor=col.color;ctx.fillStyle=col.color;ctx.beginPath();ctx.arc(player.x,player.y,player.r,0,6.28);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle=col.accent;ctx.beginPath();ctx.arc(player.x,player.y,player.r*.5,0,6.28);ctx.fill();
+  ctx.fillStyle='#f4ecd8';ctx.fillRect(player.x-3,player.y-player.r-8,6,12);
+}
+async function endGame(){
+  buffs.double=0;const s=Math.min(score,4000);
+  showScreen('over');
+  $('runPoints').textContent=score;$('finalBalance').textContent='Saving…';
+  await rpc('submit_run',{p_score:s});
+  $('finalBalance').textContent='$'+usd(P.points);
+}
+
+c.addEventListener('pointerdown',e=>{if(state!=='playing')return;const r=c.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;mouse.down=true});
+c.addEventListener('pointermove',e=>{if(state!=='playing')return;const r=c.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top});
+c.addEventListener('pointerup',()=>mouse.down=false);
+c.addEventListener('pointerleave',()=>mouse.down=false);
+
+document.querySelectorAll('.char-btn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.char-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');chosenChar=b.dataset.char}));
+$('start').onclick=$('again').onclick=startRun;
+$('openShop').onclick=()=>showScreen('shop');
+$('openPower').onclick=()=>showScreen('power');
+$('cashItem').onclick=()=>{
+  if(bal()>=50)showScreen('payout');
+  else showToast('You need $50.00. You have $'+bal().toFixed(2)+'. Keep fighting.');
+};
+$('submitPayout').onclick=async()=>{
+  const handle=$('handle').value.trim();
+  if(handle.length<3){showToast('Enter your payout handle.');return}
+  if(await rpc('request_payout',{p_method:$('method').value,p_handle:handle})){
+    $('handle').value='';showToast('Request received! Reviewed within 3–5 business days. Un Ya\'U.');showScreen('menu');
+  }
+};
+document.querySelectorAll('.powerup').forEach(p=>p.addEventListener('click',async()=>{
+  if(await rpc('buy_powerup',{p_kind:p.dataset.power})){showToast('Purchased! It will be used in your next run.');updatePower()}
+}));
+$('claimDaily').onclick=async()=>{
+  if(await rpc('claim_daily')){showToast('+1,000 points credited. Ra\'Ki\'len de U.');updateMenu()}
+};
+function watchAd(){
+  if(adBusy||!P)return;
+  adBusy=true;let s=30;showToast('Ad playing… '+s+'s');
+  const t=setInterval(async()=>{
+    s--;
+    if(s>0){showToast('Ad playing… '+s+'s');return}
+    clearInterval(t);
+    if(await rpc('credit_ad')){
+      showToast('+25 points credited. Un Ya\'U.');
+      if(state==='shop')updateShop();
+      if(state==='over')$('finalBalance').textContent='$'+usd(P.points);
+    }
+    adBusy=false;
+  },1000);
+}
+
+async function boot(){
+  $('bootMsg').textContent='Connecting to the Kingdom…';$('retry').classList.add('hidden');
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){const {error}=await sb.auth.signInAnonymously();if(error)throw error}
+    const {data,error}=await sb.rpc('ensure_profile');if(error)throw error;
+    P=data;
+    showScreen('menu');
+    if(P.runs===0&&P.points===2000)showToast('Welcome, guardian! +2,000 pts to start.');
+  }catch(e){
+    $('bootMsg').textContent='Could not connect: '+(e.message||e);$('retry').classList.remove('hidden');
+  }
+}
+$('retry').onclick=boot;
+resize();requestAnimationFrame(loop);boot();
+</script>
+</body>
+</html>
