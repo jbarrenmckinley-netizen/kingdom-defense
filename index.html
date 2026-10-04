@@ -341,18 +341,88 @@ function watchAd(){
 }
 
 async function boot(){
-  $('bootMsg').textContent='Connecting to the Kingdom…';$('retry').classList.add('hidden');
+  $('bootMsg').textContent='Connecting to the Kingdom…';
+  $('retry').classList.add('hidden');
   try{
-    const {data:{session}}=await sb.auth.getSession();
-    if(!session){const {error}=await sb.auth.signInAnonymously();if(error)throw error}
-    const {data,error}=await sb.rpc('ensure_profile');if(error)throw error;
-    P=data;
-    showScreen('menu');
-    if(P.runs===0&&P.points===2000)showToast('Welcome, guardian! +2,000 pts to start.');
-  }catch(e){
-    $('bootMsg').textContent='Could not connect: '+(e.message||e);$('retry').classList.remove('hidden');
+    const {data:{session}} = await sb.auth.getSession();
+    if(session){
+      const {data,error} = await sb.rpc('ensure_profile');
+      if(error) throw error;
+      P = data;
+      showScreen('menu');
+      if(P.runs===0 && P.points===2000) showToast('Welcome back, guardian!');
+    } else {
+      showScreen('login');
+    }
+  } catch(e){
+    $('bootMsg').textContent='Could not connect: '+(e.message||e);
+    $('retry').classList.remove('hidden');
   }
 }
+
+// Add this new Auth Logic at the bottom, before `resize(); requestAnimationFrame(loop); boot();`
+$('sendCode').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    showToast('Please enter a valid email.');
+    return;
+  }
+  $('loginMsg').textContent = 'Sending code...';
+  const { error } = await sb.auth.signInWithOtp({ 
+    email: email,
+    options: { shouldCreateUser: true } 
+  });
+  if(error) {
+    $('loginMsg').textContent = 'Error: ' + error.message;
+  } else {
+    $('loginMsg').textContent = 'Code sent! Check your inbox.';
+    $('sendCode').classList.add('hidden');
+    $('otpSection').classList.remove('hidden');
+  }
+};$('verifyCode').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  const token = $('otpCode').value.trim();
+  if(!token) return;
+  
+  $('loginMsg').textContent = 'Verifying...';
+  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  
+  if(error) {
+    $('loginMsg').textContent = 'Invalid code. Try again.';
+  } else {
+    const {data: profileData, error: profileError} = await sb.rpc('ensure_profile');
+    if(profileError) {
+      $('loginMsg').textContent = 'Profile error: ' + profileError.message;
+    } else {
+      P = profileData;
+      showScreen('menu');
+      if(P.runs===0 && P.points===2000) showToast('Welcome, guardian! +2,000 pts to start.');
+    }
+  }
+};
+  
+
+$('verifyCode').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  const token = $('otpCode').value.trim();
+  if(!token) return;
+  
+  $('loginMsg').textContent = 'Verifying...';
+  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  
+  if(error) {
+    $('loginMsg').textContent = 'Invalid code. Try again.';
+  } else {
+    const {data: profileData, error: profileError} = await sb.rpc('ensure_profile');
+    if(profileError) {
+      $('loginMsg').textContent = 'Profile error: ' + profileError.message;
+    } else {
+      P = profileData;
+      showScreen('menu');
+      if(P.runs===0 && P.points===2000) showToast('Welcome, guardian! +2,000 pts to start.');
+    }
+  }
+};
 $('retry').onclick=boot;
 resize();requestAnimationFrame(loop);boot();
 </script>
