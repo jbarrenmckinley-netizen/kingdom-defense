@@ -297,10 +297,11 @@ $('cashItem').onclick=()=>{
   if(bal()>=50)showScreen('payout');
   else showToast('You need $50.00. You have $'+bal().toFixed(2)+'. Keep fighting.');
 };
+  $('handle').insertAdjacentHTML('afterend','<input id="email" type="email" placeholder="Your email (to confirm your payout)" autocomplete="email">');
 $('submitPayout').onclick=async()=>{
   const handle=$('handle').value.trim();
   if(handle.length<3){showToast('Enter your payout handle.');return}
-  if(await rpc('request_payout',{p_method:$('method').value,p_handle:handle})){
+  if(await rpc('request_payout',{p_method:$('method').value,p_handle:handle,p_email:$('email').value.trim()})){
     $('handle').value='';showToast('Request received! Reviewed within 3–5 business days. Un Ya\'U.');showScreen('menu');
   }
 };
