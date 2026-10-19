@@ -293,7 +293,7 @@ function draw(){
   ctx.fillStyle='#f4ecd8';ctx.fillRect(player.x-3,player.y-player.r-8,6,12);
 }
 async function endGame(){
-  buffs.double=0;const s=Math.min(score,4000);
+  buffs.double=0;const s=Math.min(score,200000);
   showScreen('over');
   $('runPoints').textContent=score;$('finalBalance').textContent='Saving…';
   await rpc('submit_run',{p_score:s});
