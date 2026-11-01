@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0d1f17">
+<title>Kingdom Defense — Dgireahia</title>
+<style>
+:root{color-scheme:dark}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.hidden{display:none!important}
+screen{padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px)) !important}
+  body{font-family:Georgia,serif;background:#0a1a12;color:#f4ecd8;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
+#game{position:relative;width:100vw;height:100vh;max-width:500px;max-height:900px;background:#0d1f17;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+/* Combat HUD lives in the bottom band (Doobie's ruling, 2026-10-28 ~14:37): during a
+   fight, NOTHING informational sits in the fight area — the whole HUD (points, hearts,
+   quota progress, balance, stage, sound) moved from the top edge down here, and the
+   power-up status + toast stack above it on the left. */
+#hud{position:absolute;bottom:0;left:0;right:0;padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:flex-end;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#d4af37;z-index:10;pointer-events:none;background:rgba(10,26,18,.78);border-top:1px solid rgba(212,175,55,.35)}
+#hud .l,#hud .r{display:flex;flex-direction:column;gap:3px}#hud .r{text-align:right}
+.val{color:#f4ecd8;font-size:17px;font-weight:bold}
+#hearts{font-size:17px;letter-spacing:2px;color:#c0392b}
+#powerStatus{position:absolute;left:14px;bottom:calc(62px + env(safe-area-inset-bottom,0px));font-size:10px;color:#7ba894;letter-spacing:1px;text-transform:uppercase;z-index:10;pointer-events:none}
+.screen{position:absolute;inset:0;background:rgba(10,26,18,.98);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;text-align:center;z-index:20;overflow-y:auto}
+.screen::before,.screen::after{content:"";margin:auto}
+h1{font-size:28px;color:#d4af37;margin-bottom:6px;letter-spacing:3px}
+h2{font-size:13px;color:#7ba894;margin-bottom:20px;letter-spacing:2px;text-transform:uppercase;font-weight:normal}
+.sub{font-size:12px;color:#7ba894;margin-bottom:18px;letter-spacing:1px;line-height:1.6;max-width:340px}
+.story{font-size:14px;color:#f4ecd8;line-height:1.7;max-width:340px;margin:6px 0 14px;font-style:italic}
+.char-select{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;justify-content:center}
+.char-btn{background:#142a1e;border:2px solid #2a4a38;border-radius:12px;padding:12px 14px;color:#f4ecd8;font-family:inherit;font-size:12px;cursor:pointer;min-width:88px}
+.char-btn.active{border-color:#d4af37;background:#1d3a28}
+.char-btn .name{color:#d4af37;font-weight:bold;display:block;margin-bottom:3px;font-size:13px}
+.char-btn .role{color:#7ba894;font-size:9px;text-transform:uppercase}
+.btn{background:#d4af37;color:#0d1f17;border:none;border-radius:10px;padding:13px 32px;font-family:inherit;font-size:14px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin:5px}
+.btn.secondary{background:transparent;color:#d4af37;border:2px solid #d4af37}
+.stat{font-size:14px;margin:5px 0}.stat .k{color:#7ba894;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.stat .v{color:#d4af37;font-weight:bold;font-size:20px;display:block;margin-top:2px}
+.item,.powerup{background:#142a1e;border:1px solid #2a4a38;border-radius:10px;padding:13px 18px;margin:6px 0;width:290px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;text-align:left;font-size:12px}
+.item:active,.powerup:active{border-color:#d4af37;background:#1d3a28}
+.cost{color:#d4af37;font-weight:bold}
+.ptitle{color:#d4af37;font-weight:bold;font-size:13px;margin-bottom:3px}.pdesc{color:#7ba894;font-size:10px;line-height:1.4}
+.pbuy{background:#d4af37;color:#0d1f17;padding:6px 12px;border-radius:6px;font-weight:bold;font-size:11px;margin-left:10px}
+.adSlot{width:290px;height:80px;background:linear-gradient(135deg,#142a1e,#1d3a28);border:2px solid #d4af37;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:12px 0;cursor:pointer;position:relative;color:#d4af37}
+.adSlot .brand{font-size:16px;font-weight:bold;letter-spacing:4px;margin-bottom:4px}
+.adSlot .tagline{color:#7ba894;font-size:10px;letter-spacing:1px}
+.adSlot .label{position:absolute;top:4px;right:6px;font-size:8px;color:#7ba894}
+.card{background:linear-gradient(135deg,#1d3a28,#142a1e);border:2px solid #d4af37;border-radius:12px;padding:14px 20px;margin:10px 0;width:290px}
+.card .reward{color:#d4af37;font-size:22px;font-weight:bold;margin:4px 0}
+.note{font-size:10px;color:#7ba894;line-height:1.5;margin:6px 0 10px;max-width:290px}
+.bar{width:100%;height:8px;background:#142a1e;border-radius:4px;overflow:hidden;margin:10px 0 4px;border:1px solid #2a4a38}
+.fill{height:100%;background:linear-gradient(90deg,#7ba894,#d4af37);transition:width .4s}
+input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #2a4a38;background:#142a1e;color:#f4ecd8;font-family:inherit;font-size:14px}
+#toast{position:absolute;left:14px;bottom:calc(86px + env(safe-area-inset-bottom,0px));background:rgba(10,26,18,.95);border:1px solid #d4af37;padding:9px 13px;border-radius:9px;font-size:12px;text-align:left;z-index:30;opacity:0;transition:opacity .3s;pointer-events:none;max-width:230px;line-height:1.45}
+#toast.show{opacity:1}
+#pauseBtn{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:10px;z-index:40;background:rgba(10,26,18,.92);border:1px solid #d4af37;color:#f3d27a;font-size:15px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;display:none;-webkit-tap-highlight-color:transparent}
+#pauseBtn.show{display:block}
+.spotCard{background:linear-gradient(160deg,#1d3a28,#0d2016);width:100%;height:100%;padding:40px 30px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.spotBrand{color:#d4af37;font-size:27px;font-weight:bold;letter-spacing:4px;margin-bottom:10px}
+.spotTitle{color:#f4ecd8;font-size:20px;letter-spacing:1px;margin-bottom:16px;font-style:italic}
+.spotLine{color:#cfe3d4;font-size:15px;line-height:1.65;margin:5px 0;max-width:400px}
+.browser{background:#0d1f17;border:2px solid #2a4a38;border-radius:10px;padding:10px;position:relative;margin:10px 0}
+.bbar{display:flex;align-items:center;gap:5px;margin-bottom:10px}
+.bdot{width:9px;height:9px;border-radius:50%;background:#2a4a38;display:inline-block}
+.burl{background:#142a1e;color:#7ba894;font-size:10px;border-radius:6px;padding:3px 10px;letter-spacing:1px;margin-left:6px}
+.tourGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tourBtn{border:2px solid #2a4a38;border-radius:8px;padding:10px 6px;font-size:11px;color:#f4ecd8;background:#142a1e;transition:all .3s}
+.tourBtn.on{border-color:#d4af37;background:#1d3a28;box-shadow:0 0 12px rgba(212,175,55,.45);color:#d4af37}
+#tourCursor{position:absolute;color:#d4af37;font-size:16px;transition:left .5s,top .5s;left:22%;top:52%;text-shadow:0 0 8px rgba(212,175,55,.8);pointer-events:none;z-index:5}
+#spotContinue[disabled]{opacity:.55}
+#spots{padding:0}
+.spotPane{flex:1;width:100%;display:flex}
+#spotCount{display:none}
+#spots .btn{margin:16px 0 22px}
+#fadeVeil{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .45s ease;z-index:50}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8913625952538204" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="game">
+<canvas id="c"></canvas>
+<div id="hud">
+  <div class="l"><div>Points <span class="val" id="points">0</span> <span id="hearts">♥♥♥</span></div><div id="stageProg" style="font-size:10px;color:#7ba894"></div></div>
+  <div class="r"><div>Balance <span class="val" id="balance">$0.00</span> · Stage <span class="val" id="stageNow">1</span></div><div style="font-size:9px">1000 pts = $1 · <span id="sndBtn" style="cursor:pointer;font-size:11px;color:#d4af37">🔊 Sound on</span></div></div>
+</div>
+<div id="powerStatus"></div>
+
+<div id="boot" class="screen">
+  <h1>KINGDOM DEFENSE</h1><h2>Dgireahia · Land of Provision</h2>
+  <div class="sub" id="bootMsg">Connecting to the Kingdom…</div>
+  <button class="btn hidden" id="retry">Retry</button>
+</div>
+  <div id="login" class="screen hidden">
+  <h1>KINGDOM DEFENSE</h1>
+  <h2>Dgireahia · Land of Provision</h2>
+  <div class="sub">Enter your email to receive a login code.</div>
+  <input id="loginEmail" type="email" placeholder="Your email address" autocomplete="email">
+  <button class="btn" id="sendCode">Send Login Code</button>
+  
+  <div id="otpSection" class="hidden">
+    <input id="otpCode" type="text" placeholder="Enter 6-digit code" maxlength="6" style="text-align:center; font-size:18px; letter-spacing:4px;">
+    <button class="btn" id="verifyCode">Verify & Enter</button>
+  </div>
+  <div class="note" id="loginMsg"></div>
+  </div>
+
+<div id="menu" class="screen hidden">
+  <h1>KINGDOM DEFENSE</h1><h2>Dgireahia · Land of Provision</h2>
+  <div class="sub">Choose your guardian. Hold the line. Earn $50 and cash out.</div>
+  <div class="char-select">
+    <button class="char-btn active" data-char="king"><span class="name">King</span><span class="role">Rider</span></button>
+    <button class="char-btn" data-char="buddha"><span class="name">Buddha</span><span class="role">Shield</span></button>
+    <button class="char-btn" data-char="matthias"><span class="name">Matthias</span><span class="role">Enforcer</span></button>
+  </div>
+  <div id="daily" class="card hidden">
+    <div class="note" style="margin:0">DAILY KINGDOM BLESSING</div>
+    <div class="reward">+1,000 pts</div>
+    <button class="btn" id="claimDaily" style="padding:8px 20px;font-size:12px">Claim</button>
+  </div>
+  <div class="note" id="firstRuns"></div>
+  <button class="btn" id="start">Enter the Line</button>
+  <button class="btn secondary" id="openShop">Cash Out</button>
+  <button class="btn secondary" id="openPower">Power-Ups</button>
+  <div class="card">
+    <div class="note" style="margin:0">BECOME A FOUNDING CITIZEN</div>
+    <div class="reward" style="font-size:15px">SIG #PH4401 · First 100 pairs</div>
+    <div class="bar"><div class="fill" id="gfmBar"></div></div>
+    <div class="note" id="gfmText" style="margin-bottom:8px"></div>
+    <button class="btn gfm" style="padding:9px 20px;font-size:12px">Fuel the Kingdom</button>
+  </div>
+</div>
+
+<div id="shop" class="screen hidden">
+  <h1>CASH OUT</h1><h2>Kingdom Rewards</h2>
+  <div class="stat"><span class="k">Your Balance</span><span class="v" id="shopBalance">$0.00</span></div>
+  <div class="card" style="padding:4px 20px 8px;border:none;background:none"><div class="bar"><div class="fill" id="shopProgress" style="width:0"></div></div></div>
+  <div class="note">Progress to $50.00 cash payout</div>
+  <div class="item" id="cashItem"><span>$50 Cash Payout</span><span class="cost">$50</span></div>
+  <div class="note">$50 minimum and at least 10 runs played. Sent to Cash App, PayPal, Venmo or Chime. Requests are reviewed within 3–5 business days. Power-ups are bought from your balance.</div>
+  <div class="adSlot" onclick="watchAd()"><div class="label">AD</div><div class="brand">ECHELON</div><div class="tagline">Watch 30s · Earn +25 pts (5/day)</div></div>
+  <button class="btn" onclick="showScreen('menu')">Back</button>
+</div>
+
+<div id="payout" class="screen hidden">
+  <h1>CASH OUT</h1><h2>$50 Payout</h2>
+  <select id="method"><option>Cash App</option><option>PayPal</option><option>Venmo</option><option>Chime</option></select>
+  <input id="handle" placeholder="Your $cashtag / email / @username" autocomplete="off">
+  <div class="note">$50 is deducted from your balance when you submit. Double-check your handle; payouts can't be redirected.</div>
+  <button class="btn" id="submitPayout">Submit Request</button>
+  <button class="btn secondary" onclick="showScreen('shop')">Back</button>
+</div>
+
+<div id="power" class="screen hidden">
+  <h1>POWER-UPS</h1><h2>Kingdom Armory</h2>
+  <div class="stat"><span class="k">Your Balance</span><span class="v" id="powerBalance">$0.00</span></div>
+  <div class="note" id="owned"></div>
+  <div class="note">Bought with your earned balance, not real money. Used automatically in your next run.</div>
+  <div class="powerup" data-power="rapid"><div><div class="ptitle">Rapid Fire</div><div class="pdesc">Auto-fire for 60 seconds of play.</div></div><div class="pbuy">$0.99</div></div>
+  <div class="powerup" data-power="shield"><div><div class="ptitle">Shield of Buddha</div><div class="pdesc">Absorbs 3 hits.</div></div><div class="pbuy">$1.99</div></div>
+  <div class="powerup" data-power="double"><div><div class="ptitle">Double Points</div><div class="pdesc">2x points for one run.</div></div><div class="pbuy">$1.49</div></div>
+  <div class="powerup" data-power="revive"><div><div class="ptitle">Revive Token</div><div class="pdesc">Continue once after losing all lives.</div></div><div class="pbuy">$2.99</div></div>
+  <button class="btn" onclick="showScreen('menu')">Back</button>
+</div>
+
+<div id="stageDone" class="screen hidden">
+  <h1 id="stageTitle">STAGE 1 HELD</h1><h2>Kingdom Defense · DGIREAHIA</h2>
+  <div class="story" id="stageStory"></div>
+  <div class="note" id="stageNext"></div>
+  <div class="note">A story cinematic will play in this break — coming soon.</div>
+  <button class="btn" id="nextStageBtn">Begin Stage 2</button>
+</div>
+
+<div id="spots" class="screen hidden">
+  <h2 style="margin-top:6px">✦ From the Kingdom ✦</h2>
+  <div class="spotPane hidden" id="spot-connect">
+    <div class="spotCard">
+      <div class="spotBrand">ECHELON CONNECT</div>
+      <div class="spotTitle">Iron Man Moving</div>
+      <div class="spotLine">Book trusted movers — your move, handled with care.</div>
+      <div class="spotLine">Reserve your date today: a deposit books your crew, and the balance is due when the job is done.</div>
+    </div>
+  </div>
+  <div class="spotPane hidden" id="spot-candy">
+    <div class="spotCard">
+      <div class="spotBrand">DOOBIE'S DANDY CANDY</div>
+      <div class="spotTitle">Apple Seeds</div>
+      <div class="spotLine">Sweet roots, kingdom grown.</div>
+      <div class="spotLine">A taste of provision in every pack — look for Doobie's Dandy Candy.</div>
+    </div>
+  </div>
+  <div class="spotPane hidden" id="spot-news">
+    <div class="spotCard">
+      <div class="spotBrand">NEW NATION NEWS</div>
+      <div class="spotTitle">The Countdown Is On</div>
+      <div class="spotLine">The countdown is on — New Nation News.</div>
+      <div class="spotLine">DGIREAHIA goes live October 31 · 11:11 PM. Be watching when the balloons rise.</div>
+    </div>
+  </div>
+  <div class="spotPane hidden" id="spot-tour">
+    <div class="spotCard">
+      <div class="spotBrand">DGIREAHIA.COM</div>
+      <div class="spotTitle">Take the Tour</div>
+      <div class="browser">
+        <div class="bbar"><span class="bdot"></span><span class="bdot"></span><span class="bdot"></span><span class="burl">dgireahia.com</span></div>
+        <div class="tourGrid">
+          <div class="tourBtn">New Nation News</div>
+          <div class="tourBtn">Kingdom Defense</div>
+          <div class="tourBtn">Talk Less Make More</div>
+          <div class="tourBtn">Echelon Connect</div>
+        </div>
+        <div id="tourCursor">➤</div>
+      </div>
+      <div class="spotLine">Check out dgireahia.com — every door of the Kingdom, one address.</div>
+    </div>
+  </div>
+  <div id="spotCount" class="note" style="min-height:16px"></div>
+  <button class="btn" id="spotContinue" disabled>Continue</button>
+</div>
+
+<div id="over" class="screen hidden">
+  <h1>THE LINE HELD</h1><h2>Well fought, guardian</h2>
+  <div class="stat"><span class="k">Points This Run</span><span class="v" id="runPoints">0</span></div>
+  <div class="stat"><span class="k">Total Balance</span><span class="v" id="finalBalance">$0.00</span></div>
+  <div class="adSlot" onclick="watchAd()"><div class="label">AD</div><div class="brand">ECHELON</div><div class="tagline">Watch 30s · Earn +25 pts (5/day)</div></div>
+  <div><button class="btn" id="again">Fight Again</button><button class="btn secondary" onclick="showScreen('menu')">Menu</button></div>
+  <button class="btn secondary gfm" style="padding:9px 20px;font-size:12px">Fuel the Kingdom</button>
+</div>
+<div id="toast"></div>
+<button id="pauseBtn" type="button">⏸ Pause</button>
+<div id="fadeVeil"></div>
+</div>
+
+<script>
+// ===== CONFIG: edit these =====
+const SUPABASE_URL='https://hvqrmhcjylftrukelwjq.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2cXJtaGNqeWxmdHJ1a2Vsd2pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4OTYyMzAsImV4cCI6MjEwNjQ3MjIzMH0.7GoUEy4QhoXws8t5dPelZlgAU2gfFPbzN8PK6KEmgio'; // public anon key
+const GOFUNDME_URL='https://gofund.me/9b38de584';
+const GFM_RAISED=0, GFM_GOAL=10000; // update RAISED by hand
+// ==============================
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+const c=$('c'),ctx=c.getContext('2d');
+let W,H;
+function resize(){const r=c.getBoundingClientRect();c.width=r.width*devicePixelRatio;c.height=r.height*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);W=r.width;H=r.height}
+window.addEventListener('resize',resize);
+
+let P=null,state='boot',chosenChar='king',player,bullets=[],enemies=[],enemyBullets=[],drops=[],particles=[],score=0,lives=3,spawnTimer,lastTime,mouse,toastT,adBusy=false,inv={shield:0,revive:0},shieldHits=0;
+let buffs={rapid:0,double:0};
+let stage=1,stageKills=0,stageGoal=40,banner=null;
+let stageSmall=0,stageMedium=0,redSpawned=0,mediumSpawned=0;
+// Per-stage score banking (Doobie's ruling, 2026-10-28 pass 2): `score` stays the DISPLAYED
+// run total and carries across stages. stageScore holds the current stage's points; when a
+// stage is completed, its points LOCK IN to bankedScore (see stageComplete). If the player
+// dies mid-stage, only that stage's stageScore is lost — endGame submits the BANKED total.
+let bankedScore=0,stageScore=0;
+let stageElapsed=0,stagePhase='main',flurryLeft=0,flurryTimer=0,stageDrops=0,dropBudget=1,keys={left:false,right:false};
+let fireCd=0;
+// Player power curve (Doobie's calibration ruling, 2026-10-27): the ship starts modest and only
+// reaches the old full fire rate around stage 8-9. Fire interval in frame units: x1.35 slower
+// than the old every-frame fire at stage 1, improving x0.96 per stage (compounding).
+function fireIntervalFor(n){return 1.35*Math.pow(0.96,n-1)}
+let spotTimer=null,spotPair=[],spotStep=0,spotEndAt=0,spotTotalEnd=0,spotCursor=0,tourTimer=null,tourIdx=0,spotFadeLock=false;
+// Intra-stage ramp phases (Doobie's playtest ruling, 2026-10-27): slow learn-in, then faster + bigger at ~30s and ~90s
+const PHASES=[{spawn:1.15,spd:0.8,scale:1},{spawn:0.95,spd:1,scale:1.08},{spawn:0.78,spd:1.15,scale:1.16}];
+// Enemy movement speed (Doobie's ruling, 2026-10-29): the orbs move at HALF the speed they
+// had — the intra-stage ramp (phases above) still climbs gradually, it just tops out at half.
+const ENEMY_SPD=0.5;
+function phaseIdx(){return stageElapsed<30?0:stageElapsed<90?1:2}
+// Stage pacing (Doobie's ruling, 2026-10-28 ~14:37): EVERY stage runs about 3 minutes
+// (165-195s of play). The quota fight is paced by this spawn interval: a faster base
+// feed than the old 107-frame constant so the 150 quota kills land in ~135-140s on
+// boss stages, leaving room for the flurry and a ~40s boss fight inside the 3 minutes.
+// The feed quickens by 8 frames/stage (not the old 4) because from stage 3 the blue
+// fighters divert ever more fire from the quota — without the compensation the main
+// phase stretches ~10s longer per stage and totals balloon past 200s again.
+// Stage 1 has NO boss, so its feed is stretched by S1_PACE (x1.28) instead — the quotas
+// alone fill its whole 3 minutes.
+const S1_PACE=1.28;
+// Stage 3 runs long in sims (~150s main vs ~140 elsewhere): the blue fighters DEBUT
+// there and immediately divert a fifth of all fire, one stage before the per-stage
+// feed compensation has ramped. S3_FEED trims that debut stage's interval by 5%.
+const S3_FEED=0.95;
+// Three-minute floor (Doobie's ruling, 2026-10-30): stages MUST run three minutes.
+// The quota fight may not close before STAGE_MIN_MAIN seconds of main phase — the
+// flurry (~15s) and the boss fight (~40s, sized in bossFor) carry the total to ~3:00.
+// If quotas complete early, the feed keeps spawning: the wait is a victory lap of
+// bonus targets, never dead air. (Supersedes the old 65s gate, which let fast
+// players clear a stage in under two minutes.)
+const STAGE_MIN_MAIN=140;
+function spawnInterval(){return (96-(stage-1)*8)*PHASES[phaseIdx()].spawn*(stage===1?S1_PACE:1)*(stage===3?S3_FEED:1)}
+function dropBudgetFor(n){return n===1?1:Math.min(8,3+(n-2))}
+// Stage quotas (Doobie's ruling, 2026-10-28 — supersedes the single kill-goal of calibration v2):
+// a stage may not end until the player has killed at least SMALL_QUOTA small reds AND at least
+// MEDIUM_QUOTA medium reds in that stage. Small = drone/runner (1 HP). Medium = shadow + heavy
+// (the bigger reds, 5 HP). Blue fighters and Vanguards count toward NEITHER quota — bonus only.
+const SMALL_QUOTA=100,MEDIUM_QUOTA=50;
+// The first boss appears in stage BOSS_FIRST_STAGE (Doobie's ruling, 2026-10-28: NO boss in
+// stage 1). Flip this one number to 3 if the first boss should hold until stage 3 instead.
+const BOSS_FIRST_STAGE=2;
+// Stage-1 phased introduction (Doobie's ruling, 2026-10-28 pass 2, steered same day):
+// stage 1 is where the player learns — small reds come out first, and once S1_OPENING_SMALLS
+// smalls are killed ("maybe about 50 or 60 of them") the mediums join the mix alongside the
+// smalls, with the bigger heavies toward the end. Enemies CAN shoot back from early on —
+// the protection is bullet SPEED, not silence: on stage 1 red bullets crawl at
+// S1_BULLET_SPEED (vs 3.4 standard) and stay that slow all stage, and stage-1 cadence is
+// gentler too (see the fireT reset in update); their first shot comes quickly after they
+// enter (see spawnRed's fireT), so return fire is a real presence from early on, just slow.
+// Stage 1 is reds only, and still has no boss.
+const S1_OPENING_SMALLS=55,S1_BULLET_SPEED=1.6;
+let effects={sidegun:0,slow:0,boost:0},hudSig='';
+const chars={king:{color:'#40E0D0',accent:'#008080'},buddha:{color:'#2a4a38',accent:'#d4af37'},matthias:{color:'#1a1a1a',accent:'#8b0000'}};
+const usd=p=>(p/1000).toFixed(2);
+const bal=()=>P?P.points/1000:0;
+function showToast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400)}
+async function rpc(fn,args){
+  const {data,error}=await sb.rpc(fn,args||{});
+  if(error){showToast(error.message);return null}
+  P=data;return data;
+}
+const mult=()=>(buffs.double>0||(P&&P.runs<3))?2:1;
+
+function showScreen(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  if(n!=='game')$(n).classList.remove('hidden');
+  state=n==='game'?'playing':n;
+  if(n==='menu')updateMenu();
+  if(n==='shop')updateShop();
+  if(n==='power')updatePower();
+  updateHUD();
+}
+function updateMenu(){
+  $('daily').classList.toggle('hidden',!!P.last_daily&&Date.now()-new Date(P.last_daily)<864e5);
+  const left=3-P.runs;
+  $('firstRuns').textContent=left>0?'Starter boost: 2x points on your next '+left+' run'+(left>1?'s':''):'';
+  $('gfmBar').style.width=Math.min(100,GFM_RAISED/GFM_GOAL*100)+'%';
+  $('gfmText').textContent='$'+GFM_RAISED.toLocaleString()+' of $'+GFM_GOAL.toLocaleString()+' raised';
+}
+function updateShop(){$('shopBalance').textContent='$'+usd(P.points);$('shopProgress').style.width=Math.min(100,bal()/50*100)+'%'}
+function updatePower(){
+  $('powerBalance').textContent='$'+usd(P.points);
+  $('owned').textContent='Owned: Rapid x'+P.inv_rapid+' · Shield x'+P.inv_shield+' · Double x'+P.inv_double+' · Revive x'+P.inv_revive;
+}
+function updateHUD(){
+  if(!P)return;
+  $('points').textContent=score;
+  $('balance').textContent='$'+usd(P.points+(state==='playing'?score:0));
+  $('hearts').textContent='♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,3-lives));
+  const a=[];
+  if(buffs.rapid>0)a.push('RAPID');
+  if(state==='playing'&&mult()===2)a.push('2x');
+  if(shieldHits>0)a.push('SHIELD x'+shieldHits);
+  if(inv.revive>0)a.push('REVIVE');
+  if(effects.sidegun>0)a.push('SIDE GUN '+Math.ceil(effects.sidegun)+'s');
+  if(effects.slow>0)a.push('SLOW '+Math.ceil(effects.slow)+'s');
+  if(effects.boost>0)a.push('BOOST '+Math.ceil(effects.boost)+'s');
+  $('powerStatus').textContent=a.join(' · ');
+  const sp=$('stageProg');if(sp)sp.textContent=state==='playing'||state==='stageDone'?('Line held: '+Math.min(stageSmall,SMALL_QUOTA)+' small · '+Math.min(stageMedium,MEDIUM_QUOTA)+' medium'):'';
+  const sn=$('stageNow');if(sn)sn.textContent=stage;
+}
+function openGFM(){window.open(GOFUNDME_URL,'_blank','noopener')}
+document.querySelectorAll('.gfm').forEach(b=>b.onclick=openGFM);
+
+async function startRun(){
+  showScreen('game');resize();
+  player={x:W/2,y:H-80,r:22};bullets=[];enemies=[];enemyBullets=[];drops=[];particles=[];score=0;bankedScore=0;stageScore=0;lives=3;spawnTimer=0;
+  buffs={rapid:0,double:0};effects={sidegun:0,slow:0,boost:0};hudSig='';shieldHits=0;inv={shield:P.inv_shield,revive:P.inv_revive};
+  clearInterval(spotTimer);stopTour();
+  lastTime=performance.now();mouse={x:W/2,down:false};pointers.clear();
+  const owned={rapid:P.inv_rapid>0,double:P.inv_double>0};
+  if(owned.rapid){buffs.rapid=60;rpc('use_powerup',{p_kind:'rapid'})}
+  if(owned.double){buffs.double=1;rpc('use_powerup',{p_kind:'double'})}
+  beginStage(1);
+  updateHUD();
+}
+function spawnEnemy(){
+  // Regular blue fighters debut at stage 3 (Doobie's ruling); the stage boss (first at stage BOSS_FIRST_STAGE) spawns separately
+  const blueCh=stage<3?0:Math.min(.45,.20+.05*(stage-3));
+  if(Math.random()<blueCh){spawnBlue();return}
+  if(Math.random()<0.32){spawnCluster();return}
+  spawnRed();
+}
+function spawnCluster(){
+  // Bunched entries — groups arriving together (Doobie likes the clustered waves)
+  const n=phaseIdx()===0?2:2+Math.floor(Math.random()*3);
+  const cx=60+Math.random()*(W-120);
+  for(let i=0;i<n;i++)spawnRed(cx+(Math.random()*36-18),-30-i*26);
+}
+// Red toughness ladder (Doobie's calibration ruling, 2026-10-27; quota classes per his
+// 2026-10-28 ruling): small reds (drone/runner) die in 1 shot while the player learns; the
+// bigger MEDIUM reds — shadow and heavy — take 5 hits. From ~45% through stage 1 onward,
+// HEAVY reds join the waves at ~20% share, growing per stage to a ~35% cap.
+function heavyShare(){return Math.min(0.35,0.20+0.03*(stage-1))}
+function heaviesLive(){return stage>1||stageKills>=0.45*stageGoal}
+// Kill values (Doobie's economy ruling, 2026-10-28): money was accruing far too fast —
+// "cut the money amounts to a quarter of what they are currently." Every enemy's point
+// value is quartered (the conversion is UNCHANGED at 1000 pts = $1): drone 80→20,
+// runner 50→13 (12.5 rounded), shadow 120→30, heavy 120→30, blue 300→75, vanguard
+// 600→150, boss 600→150. The ad placeholder toast (+25→+6) and the daily bonus toast
+// (+1,000→+250) are quartered to match — but the amounts those RPCs actually credit
+// are set server-side and must be quartered there too (credit_ad, claim_daily).
+function spawnRed(cx,yOff){
+  let f=['drone','shadow','runner'][Math.floor(Math.random()*3)];
+  if(heaviesLive()&&Math.random()<heavyShare())f='heavy';
+  // Medium guarantee (quota ruling, 2026-10-28): at least MEDIUM_QUOTA mediums must actually
+  // spawn per stage, from stage 1 on. If mediums sent fall below a third of reds sent, this
+  // one is a medium (shadow, or a heavy once heavies are live) — the quota is always reachable.
+  // The mix is paced from both sides: if mediums run ahead of the 1:2 quota pace, this one is
+  // a small instead, so the two quotas fill together at ~150 red kills rather than the small
+  // quota starving while mediums overshoot (which stretched stages well past the quota math).
+  if(mediumSpawned*3<redSpawned)f=(heaviesLive()&&Math.random()<0.5)?'heavy':'shadow';
+  else if(mediumSpawned*3>redSpawned+6)f=['drone','runner'][Math.floor(Math.random()*2)];
+  // Stage-1 opening gate (pass-2 ruling): until the player has S1_OPENING_SMALLS small kills,
+  // EVERY red that spawns on stage 1 is small — whatever the mix or the pacing above rolled,
+  // and the medium counter doesn't move. Target practice first; mediums join after.
+  if(stage===1&&stageSmall<S1_OPENING_SMALLS&&(f==='shadow'||f==='heavy'))f=Math.random()<0.5?'drone':'runner';
+  redSpawned++;if(f==='shadow'||f==='heavy')mediumSpawned++;
+  const sc=PHASES[phaseIdx()].scale;
+  enemies.push({kind:'red',form:f,x:cx!==undefined?Math.max(24,Math.min(W-24,cx)):Math.random()*(W-60)+30,y:yOff!==undefined?yOff:-30,vy:f==='runner'?2.5:f==='drone'?1.2:f==='heavy'?1.1:1.6,vx:f==='shadow'?(Math.random()-.5)*1.5:0,r:Math.round((f==='drone'?18:f==='shadow'?24:f==='heavy'?32:16)*sc),hp:(f==='heavy'||f==='shadow')?5:1,maxhp:(f==='heavy'||f==='shadow')?5:1,points:f==='runner'?13:f==='shadow'?30:f==='heavy'?30:20,wobble:Math.random()*6.28,fireT:stage===1?0.6+Math.random()*0.7:1.6+Math.random()*1.4});
+}
+function spawnBlue(){
+  const vang=stage>=6&&Math.random()<0.25;
+  const sc=PHASES[phaseIdx()].scale;
+  enemies.push({kind:'blue',vanguard:vang,x:Math.random()*(W-140)+70,y:-46,r:Math.round((vang?38:30)*sc),hp:vang?20:10,maxhp:vang?20:10,points:vang?150:75,mode:'enter',phaseT:0,sweepT:Math.random()*6.28,anchorX:0,tx:0,ty:0,fireT:1.1+Math.random()*0.7,wobble:0});
+}
+// ===== Stage boss (one per stage, after the closing red flurry) =====
+function bossFor(n){
+  const pals=['#37c8ff','#ffd23e','#b26bff','#37ffb0','#ff4f6d','#ffe14f'];
+  // Boss toughness (Doobie's ruling, 2026-10-28 ~14:37 — SUPERSEDES the pass-2 sizing):
+  // every stage runs about 3 minutes, so the boss is sized DOWN to fit its stage: the
+  // fight (entry + kill) takes roughly 30-50s of the stage, the quota fight fills the
+  // rest. The 240-hit sizing from earlier the same day predated the 3-minute ruling —
+  // at 240 the debut fight alone ran ~265s and stages ballooned to 7-8 minutes.
+  // Debut (stage 2): 36 landed hits, +3 per stage after — modest growth. (The fights
+  // still lengthen a little with stage: the boss sweeps faster as stages rise, so a
+  // smaller share of the bullet stream connects — +3 roughly cancels that drift and
+  // holds every fight inside ~30-50s.)
+  // The evasion is unchanged: the boss jinks almost constantly, and while it is
+  // mid-jink most connecting shots are slipped (see the collision code).
+  return {hp:36+3*(n-BOSS_FIRST_STAGE),r:n===2?64:52+Math.min(12,(n-1)*2),husky:n===2||n>=4,sweepSpeed:2.1+0.28*(n-1),dodgeChance:Math.min(0.9,0.80+0.02*(n-1)),fireInterval:Math.max(1.05,1.6-0.07*(n-1)),color:pals[(n-1)%pals.length],name:n===1?'BLUE DREADNOUGHT':n===2?'THE HUSKY LEVIATHAN':'STAGE '+n+' DREADNOUGHT'};
+}
+function spawnBoss(){
+  // Singularity (verified pass 2, 2026-10-28): exactly ONE boss alive at a time, period.
+  // spawnBoss has a single call site — the flurry-clear branch in update(), which sets
+  // stagePhase='boss' as it calls, so it cannot re-enter — and this guard makes a stacked
+  // second boss impossible even if a future path ever calls it again.
+  if(enemies.some(e=>e.kind==='boss'))return;
+  const b=bossFor(stage);
+  enemies.push({kind:'boss',x:W/2,y:-70,r:b.r,hp:b.hp,maxhp:b.hp,points:150,mode:'enter',sweepT:Math.random()*6.28,sweepSpeed:b.sweepSpeed,dodgeChance:b.dodgeChance,dodgeCd:0,dodgeT:0,dodgeX:0,fireT:b.fireInterval,fireInterval:b.fireInterval,fightT:0,volley:0,husky:b.husky,color:b.color,name:b.name,wobble:0});
+  banner={title:'⚠ BOSS ⚠',sub:b.name+' — Stage '+stage,until:performance.now()+2600};
+}
+function bossFire(e){
+  e.volley++;
+  const aim=Math.atan2(player.y-e.y,player.x-e.x);
+  const mk=(ang,sp,kind)=>{sfx('eshot');return enemyBullets.push({x:e.x,y:e.y+e.r*.6,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,r:kind==='bossbeam'?6:5.5,color:e.color,kind})};
+  // Boss fire ladder (Doobie's pass-2 steering, 2026-10-28): patterns build GRADUALLY across
+  // stages 2-10 — the intensity the old ladder reached at stage 4 (the triple spread) now
+  // arrives at stage 10. Singles first (speed rising), then doubles, first beams as garnish,
+  // then triples widening; the old stage-5 pattern lands at 11, the old stage-6+ wall-leaning
+  // quad at 12+. Every tier leaves real gaps on a phone screen — never a wall of bullets.
+  if(stage===2)mk(aim,2.6,'boss');
+  else if(stage===3)mk(aim,3.1,'boss');
+  else if(stage===4)mk(aim,4.3,'boss');
+  else if(stage===5){mk(aim-0.07,4.4,'boss');mk(aim+0.07,4.4,'boss')}
+  else if(stage===6){mk(aim-0.08,4.6,'boss');mk(aim+0.08,4.6,'boss');if(e.volley%4===0)mk(aim,4.4,'bossbeam')}
+  else if(stage===7){[-0.13,0,0.13].forEach(o=>mk(aim+o,4.7,'boss'))}
+  else if(stage===8){[-0.14,0,0.14].forEach(o=>mk(aim+o,4.8,'boss'));if(e.volley%4===0)mk(aim,4.6,'bossbeam')}
+  else if(stage===9){[-0.15,0,0.15].forEach(o=>mk(aim+o,4.9,'boss'));if(e.volley%4===0)mk(aim,4.7,'bossbeam')}
+  else if(stage===10){[-0.16,0,0.16].forEach(o=>mk(aim+o,5.0,'boss'))}
+  else if(stage===11){[-0.16,0,0.16].forEach(o=>mk(aim+o,5.4,'boss'));if(e.volley%3===0)mk(aim,4.8,'bossbeam')}
+  else{[-0.24,-0.08,0.08,0.24].forEach(o=>mk(aim+o,Math.min(6,5.4+0.1*(stage-11)),'boss'));if(e.volley%2===0)mk(aim,5.2,'bossbeam')}
+}
+function moveBoss(e,dt,sf){
+  if(e.mode==='enter'){
+    e.y+=1.7*dt*sf;
+    // The boss jinks sideways while descending too (same dodge state as the fight phase) —
+    // flying straight down the middle let it die in the bullet stream before the fight began.
+    if(e.dodgeCd>0)e.dodgeCd-=dt/60;
+    if(e.dodgeT>0){e.dodgeT-=dt/60;const dx=e.dodgeX-e.x;const ms=16*dt*sf;e.x+=Math.max(-ms,Math.min(ms,dx));e.x=Math.max(e.r+4,Math.min(W-e.r-4,e.x))}
+    if(e.y>=125){e.y=125;e.mode='fight'}
+    return;
+  }
+  e.fightT+=dt/60;
+  if(e.dodgeCd>0)e.dodgeCd-=dt/60;
+  e.sweepT+=dt*sf*(0.9+0.06*(stage-1));
+  const target=W/2+Math.sin(e.sweepT)*Math.max(40,W/2-e.r-16);
+  let tx=target,maxStep=e.sweepSpeed*dt*sf;
+  if(e.dodgeT>0){e.dodgeT-=dt/60;tx=e.dodgeX;maxStep=16*dt*sf}
+  const dx=tx-e.x;e.x+=Math.max(-maxStep,Math.min(maxStep,dx));
+  e.x=Math.max(e.r+4,Math.min(W-e.r-4,e.x));
+  if(e.fightT>=3){e.fireT-=dt/60*(effects.slow>0?0.6:1);if(e.fireT<=0){bossFire(e);e.fireT=e.fireInterval*(0.9+Math.random()*0.2)}}
+}
+// ===== Sound: synthesized effects matched to the fighting, built for bass (WebAudio, no audio files) =====
+let AC=null,masterGain=null,noiseBuf=null,muted=false;const sndLast={};
+function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=8;masterGain=AC.createGain();masterGain.gain.value=0.9;masterGain.connect(comp);comp.connect(AC.destination)}catch(e){return null}}if(AC.state==='suspended')AC.resume();return AC}
+function envG(g,t,v,dur){g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+dur)}
+function toneS(f0,f1,dur,type,vol,delay){const c=ac();if(!c||!masterGain)return;const t=c.currentTime+(delay||0);const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),t+dur);envG(g,t,vol,dur);o.connect(g);g.connect(masterGain);o.start(t);o.stop(t+dur+.03)}
+function subS(f0,f1,dur,vol,delay){const c=ac();if(!c||!masterGain)return;const t=c.currentTime+(delay||0);const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur);envG(g,t,vol,dur);o.connect(g);g.connect(masterGain);o.start(t);o.stop(t+dur+.03)}
+function nzS(dur,vol,cutoff,delay){const c=ac();if(!c||!masterGain)return;if(!noiseBuf){noiseBuf=c.createBuffer(1,c.sampleRate,c.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}const t=c.currentTime+(delay||0);const s=c.createBufferSource();s.buffer=noiseBuf;s.loop=true;const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=cutoff;const g=c.createGain();envG(g,t,vol,dur);s.connect(f);f.connect(g);g.connect(masterGain);s.start(t);s.stop(t+dur+.03)}
+function sfx(name){if(muted)return;const now=performance.now();const gate={shot:55,eshot:170,hit:45,slip:80}[name]||0;if(gate){if(now-(sndLast[name]||0)<gate)return;sndLast[name]=now}
+  if(name==='shot')toneS(920,240,.08,'square',.045);
+  else if(name==='eshot')toneS(300,170,.07,'sawtooth',.016);
+  else if(name==='hit'){toneS(260,130,.05,'square',.05);nzS(.05,.05,1500)}
+  else if(name==='pop'){nzS(.18,.2,900);subS(150,50,.16,.28)}
+  else if(name==='bluepop'){nzS(.22,.22,1200);subS(170,60,.2,.32)}
+  else if(name==='heavy'){nzS(.34,.3,500);subS(110,38,.32,.45)}
+  else if(name==='boom'){nzS(.8,.5,260);subS(100,26,.8,.7);subS(64,24,1,.55,.05)}
+  else if(name==='slip')nzS(.15,.07,3200);
+  else if(name==='shield'){toneS(520,380,.1,'triangle',.15);toneS(780,780,.06,'sine',.1)}
+  else if(name==='hurt'){toneS(150,55,.3,'sawtooth',.2);subS(90,35,.3,.45);nzS(.25,.18,420)}
+  else if(name==='pickup'){toneS(660,660,.09,'sine',.12);toneS(990,990,.14,'sine',.12,.08)}
+  else if(name==='clear'){[392,523,659,784].forEach((f,i)=>toneS(f,f,.18,'triangle',.12,i*.09));subS(98,98,.5,.16)}
+}
+document.addEventListener('pointerdown',()=>ac(),{once:true});
+function shoot(x,y){const dx=x-player.x,dy=y-player.y,l=Math.hypot(dx,dy)||1;bullets.push({x:player.x,y:player.y-15,vx:dx/l*12,vy:dy/l*12,life:60,r:4})}
+function fireGuns(){
+  sfx('shot');
+  shoot(player.x,player.y-100);
+  if(effects.sidegun>0){
+    bullets.push({x:player.x-26,y:player.y-6,vx:0,vy:-12,life:50,r:3.5});
+    bullets.push({x:player.x+26,y:player.y-6,vx:0,vy:-12,life:50,r:3.5});
+  }
+  // Boss evasion: when the player fires, the boss often sidesteps so shots miss.
+  // Covers the descent ('enter') as well as the fight — a boss that only dodges once it
+  // reaches the line never survived its own entrance. Shorter cooldown + longer sidestep
+  // than the original tuning, so far fewer of the ~44 shots/sec connect (option-b fix).
+  const boss=enemies.find(e=>e.kind==='boss');
+  if(boss&&boss.dodgeCd<=0&&Math.random()<boss.dodgeChance){
+    // Jink toward open water: a dodge rolled into the wall clamps to the boss's own position
+    // and pins it in the bullet stream — the failure mode this fix exists to remove.
+    let dir=Math.random()<0.5?-1:1;const dist=100+Math.random()*70;
+    if(boss.x+dir*dist<W*0.18||boss.x+dir*dist>W*0.82)dir=-dir;
+    boss.dodgeX=Math.max(boss.r+6,Math.min(W-boss.r-6,boss.x+dir*dist));
+    boss.dodgeT=0.35;boss.dodgeCd=0.02;
+  }
+}
+function enemyFire(e){
+  if(e.kind==='boss')return;
+  if(!player||e.y<0||e.y>player.y-70)return;
+  if(e.kind==='blue'){
+    const cols=['#37c8ff','#b26bff','#ff4fd8','#ffe14f'];
+    const n=e.vanguard?3:2;
+    for(let k=0;k<n;k++){
+      const a=Math.atan2(player.y-e.y,player.x-e.x)+(k-(n-1)/2)*0.09;
+      sfx('eshot');enemyBullets.push({x:e.x,y:e.y+e.r*.6,vx:Math.cos(a)*5.3,vy:Math.sin(a)*5.3,r:5.5,color:cols[Math.floor(Math.random()*cols.length)],kind:'blue'});
+    }
+  }else if(stage===1||stage>=3){
+    const a=Math.atan2(player.y-e.y,player.x-e.x);
+    // Stage 1 (pass-2 steering): reds shoot back from early on, but their bullets crawl at
+    // S1_BULLET_SPEED — slow enough to sidestep while learning the controls — all stage.
+    // Stage 2 reds stay silent, as they were before this pass (blues debut at stage 3).
+    // Dodgeability curve (Doobie's ruling, 2026-10-30): enemy bullets stay EASILY
+    // dodgeable through stage 3 (1.6 / 2.2 / 2.8); the pressure steps up from stage 4
+    // ("uh-oh, move your finger") on the original ramp.
+    const sp=stage===1?S1_BULLET_SPEED:stage===2?2.2:stage===3?2.8:Math.min(4.6,3.4+0.15*(stage-1));
+    sfx('eshot');enemyBullets.push({x:e.x,y:e.y+e.r*.6,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:4,color:'#ff5a3c',kind:'red'});
+  }
+}
+function burst(x,y,color,n){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=Math.random()*4+1;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:30,color,r:Math.random()*3+1})}}
+function slowFactor(){return effects.slow>0?0.45:1}
+function moveBlue(e,dt,sf){
+  e.phaseT-=dt/60*sf;
+  if(e.mode==='enter'){
+    e.y+=1.7*dt*sf;
+    if(e.y>=105){e.mode='sweep';e.phaseT=2.4+Math.random()*1.2;e.anchorX=e.x;e.sweepT=0}
+  }else if(e.mode==='sweep'){
+    e.sweepT+=dt*sf;
+    e.x=e.anchorX+Math.sin(e.sweepT*1.4)*Math.min(e.vanguard?120:95,W/2-56);
+    e.y+=0.35*dt*sf;
+    if(e.phaseT<=0){e.mode='dive';e.tx=player?player.x:e.x;e.ty=Math.min(H*0.62,(player?player.y:H)-140)}
+  }else if(e.mode==='dive'){
+    const dx=e.tx-e.x,dy=e.ty-e.y,l=Math.hypot(dx,dy)||1,sp=(e.vanguard?3.8:4.3)*sf;
+    e.x+=dx/l*sp*dt;e.y+=dy/l*sp*dt;
+    if(l<14||e.y>=e.ty)e.mode='retreat';
+  }else{
+    e.y-=2.7*dt*sf;e.x+=(e.anchorX-e.x)*.03*dt;
+    if(e.y<=80){e.mode='sweep';e.phaseT=2.2+Math.random()*1.2;e.sweepT=0;e.anchorX=e.x}
+  }
+}
+function drawBlue(e){
+  const s=e.r/30;
+  ctx.save();ctx.translate(e.x,e.y);
+  ctx.shadowBlur=16;ctx.shadowColor='#37c8ff';
+  ctx.fillStyle=e.vanguard?'#1d2f57':'#14406e';
+  ctx.strokeStyle=e.vanguard?'#d4af37':'#37c8ff';ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(0,20*s);ctx.lineTo(8*s,2*s);ctx.lineTo(26*s,-8*s);ctx.lineTo(30*s,-18*s);ctx.lineTo(10*s,-12*s);ctx.lineTo(4*s,-20*s);ctx.lineTo(-4*s,-20*s);ctx.lineTo(-10*s,-12*s);ctx.lineTo(-30*s,-18*s);ctx.lineTo(-26*s,-8*s);ctx.lineTo(-8*s,2*s);
+  ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle='#bfe9ff';ctx.beginPath();ctx.arc(0,2*s,5.5*s,0,6.28);ctx.fill();
+  ctx.fillStyle='#ff4fd8';ctx.fillRect(-25*s,-14*s,5*s,3*s);ctx.fillRect(20*s,-14*s,5*s,3*s);
+  ctx.restore();
+  if(e.hp<e.maxhp){const w=e.r*2;ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(e.x-e.r,e.y-e.r-12,w,5);ctx.fillStyle='#37c8ff';ctx.fillRect(e.x-e.r,e.y-e.r-12,w*Math.max(0,e.hp/e.maxhp),5)}
+}
+function drawBoss(e){
+  const s=e.r/52,wScale=e.husky?1.3:1;
+  ctx.save();ctx.translate(e.x,e.y);ctx.scale(wScale,1);
+  ctx.shadowBlur=20;ctx.shadowColor=e.color;
+  ctx.fillStyle=stage===1?'#14406e':'#1d2f57';
+  ctx.strokeStyle=e.color;ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(0,26*s);ctx.lineTo(10*s,4*s);ctx.lineTo(34*s,-10*s);ctx.lineTo(40*s,-24*s);ctx.lineTo(14*s,-16*s);ctx.lineTo(6*s,-27*s);ctx.lineTo(-6*s,-27*s);ctx.lineTo(-14*s,-16*s);ctx.lineTo(-40*s,-24*s);ctx.lineTo(-34*s,-10*s);ctx.lineTo(-10*s,4*s);
+  ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  if(e.husky){ctx.strokeStyle='rgba(244,236,216,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-24*s,-6*s);ctx.lineTo(24*s,-6*s);ctx.stroke()}
+  ctx.fillStyle='#bfe9ff';ctx.beginPath();ctx.arc(0,4*s,7*s,0,6.28);ctx.fill();
+  ctx.fillStyle=e.color;ctx.fillRect(-33*s,-20*s,7*s,4*s);ctx.fillRect(26*s,-20*s,7*s,4*s);
+  ctx.restore();
+  // No HP bar or label rides on the boss anymore (Doobie's ruling, 2026-10-28 ~14:37):
+  // during combat, informational elements live in the bottom band only — the boss's
+  // health is drawn as a named bar down there (see draw()).
+}
+function maybeDrop(e){
+  // Per-stage drop budget (Doobie's ruling): stage 1 at most 1, stage 2 at most 3, then slow growth, capped at 8
+  if(e.kind==='boss'||stageDrops>=dropBudget)return;
+  let ch=e.kind==='blue'?0.45:0.12;
+  // Stage 1 (Doobie's calibration ruling): exactly ONE power-up all stage, and it is the SIDE GUNS.
+  // If the random roll hasn't produced it by halfway through the stage, the next red kill forces it.
+  if(stage===1&&stageDrops===0&&stageKills>=stageGoal*0.5)ch=1;
+  if(Math.random()<ch){
+    stageDrops++;
+    const kinds=['sidegun','slow','boost'];
+    drops.push({x:e.x,y:e.y,vy:4.4,r:11,kind:stage===1?'sidegun':kinds[Math.floor(Math.random()*kinds.length)],age:0});
+  }
+}
+function applyDrop(k){
+  sfx('pickup');
+  if(k==='sidegun'){effects.sidegun=30;showToast('Power-up: SIDE GUN — twin fire for 30s!')}
+  else if(k==='slow'){effects.slow=5+Math.random();showToast('Power-up: SLOW — the enemy crawls!')}
+  else{effects.boost=5+Math.random()*2;showToast('Power-up: BOOST — guardian speed up!')}
+  hudSig='';
+  burst(player.x,player.y-10,'#d4af37',12);updateHUD();
+}
+function hitPlayer(){
+  if(shieldHits===0&&inv.shield>0){inv.shield--;shieldHits=3;rpc('use_powerup',{p_kind:'shield'})}
+  if(shieldHits>0){shieldHits--;sfx('shield');burst(player.x,player.y,'#d4af37',16);showToast('Shield absorbed the hit!');updateHUD();return}
+  sfx('hurt');lives--;updateHUD();
+  if(lives<=0){
+    if(inv.revive>0){inv.revive--;rpc('use_powerup',{p_kind:'revive'});lives=3;showToast('Revived!');updateHUD()}
+    else endGame();
+  }
+}
+function stageSub(n){return n===1?'The Threat Revealed':n===2?'Blue Fighters Approach':n===3?'The Cost of the Line':n===4?"A Guardian's Story":n===5?'The Champion Comes':'Deeper Into the Dark'}
+function storyFor(f,t){
+  if(f===1)return 'The first wave breaks against the Line — but the scouts were only the shadow of what follows. On the horizon, larger ships gather: blue fighters, swift and merciless. The threat is real now. Hold the Line.';
+  if(f===2)return 'The blue fighters have shown what they can do, and the Kingdom counts the cost. Every guardian who stands buys time for those behind the Line. Stand firmer — the enemy quickens.';
+  if(f===3)return 'Between battles, the guardians remember why they fight: the fields, the families, the light of DGIREAHIA at dawn. A kingdom worth defending is a people worth knowing. The Line holds because love holds it.';
+  if(f===4)return 'The enemy sends its champion — a vanguard ship of terrible size, wreathed in fire of many colors. If the Line breaks here, all is open. Guardians, this is the hour. Stand.';
+  if(f===5)return 'The champion falls, and still the dark presses in — new colors on the horizon, new dangers gathering. The story of DGIREAHIA is written by those who refuse to move. Onward.';
+  return 'The Line holds another day, and the enemy returns in greater strength. The guardians of DGIREAHIA do not tire. Stage '+t+' begins.';
+}
+function beginStage(n){
+  stage=n;stageKills=0;stageGoal=SMALL_QUOTA+MEDIUM_QUOTA;
+  stageSmall=0;stageMedium=0;redSpawned=0;mediumSpawned=0;stageScore=0;
+  stageElapsed=0;stagePhase='main';flurryLeft=0;flurryTimer=0;stageDrops=0;dropBudget=dropBudgetFor(n);
+  enemies.length=0;enemyBullets.length=0;drops.length=0;bullets.length=0;
+  spawnTimer=30;
+  if(mouse)mouse.down=false;
+  banner={title:'STAGE '+n,sub:stageSub(n),until:performance.now()+2600};
+  const sn=$('stageNow');if(sn)sn.textContent=n;
+}
+function stageComplete(){
+  // Clear any power-up toast so it never bleeds over the inter-stage story text (Doobie's screen record, 2026-10-31).
+  const t=$('toast');if(t){t.classList.remove('show');clearTimeout(toastT)}
+  // Bank the won stage's points (pass-2 banking rule): locked in, kept whatever happens next.
+  bankedScore+=stageScore;stageScore=0;
+  sfx('clear');
+  if(mouse)mouse.down=false;
+  enemies.length=0;enemyBullets.length=0;drops.length=0;bullets.length=0;
+  $('stageTitle').textContent='STAGE '+stage+' HELD';
+  $('stageStory').textContent=storyFor(stage,stage+1);
+  $('stageNext').textContent='Stage '+(stage+1)+' — '+stageSub(stage+1)+'. The enemy grows stronger.';
+  $('nextStageBtn').textContent='Begin Stage '+(stage+1);
+  startSpots();
+}
+// ===== Our spots: two of our own brands' commercials rotate through each between-stage break (~15s total) =====
+const SPOTS=[
+  {id:'connect',brand:'ECHELON CONNECT'},
+  {id:'candy',brand:"DOOBIE'S DANDY CANDY"},
+  {id:'news',brand:'NEW NATION NEWS'},
+  {id:'tour',brand:'DGIREAHIA.COM'}
+];
+function veil(fn,ms){
+  ms=ms||450;const v=$('fadeVeil');if(!v){fn();return}
+  v.style.transition='opacity '+ms+'ms ease';v.style.opacity='1';
+  setTimeout(()=>{fn();v.style.opacity='0'},ms);
+}
+function startSpots(){
+  veil(()=>{
+    showScreen('spots');
+    spotPair=[SPOTS[spotCursor%SPOTS.length],SPOTS[(spotCursor+1)%SPOTS.length]];spotCursor++;
+    showSpot(0);
+  });
+}
+function showSpot(i){
+  spotStep=i;const s=spotPair[i];
+  document.querySelectorAll('.spotPane').forEach(p=>p.classList.add('hidden'));
+  $('spot-'+s.id).classList.remove('hidden');
+  spotEndAt=performance.now()+(i===0?8000:7000);
+  if(i===0)spotTotalEnd=performance.now()+15000;
+  if(s.id==='tour')startTour();else stopTour();
+  const btn=$('spotContinue');btn.disabled=true;btn.textContent='Continue';
+  clearInterval(spotTimer);spotTimer=setInterval(spotTick,200);spotTick();
+}
+function spotTick(){
+  const now=performance.now(),btn=$('spotContinue');
+  if(now>=spotTotalEnd){btn.disabled=false;btn.textContent='Continue';return}
+  if(now>=spotEndAt&&spotStep===0&&!spotFadeLock){spotFadeLock=true;veil(()=>{showSpot(1);spotFadeLock=false},300);return}
+}
+function startTour(){
+  stopTour();const btns=document.querySelectorAll('.tourBtn'),cur=$('tourCursor');
+  const pos=[['22%','52%'],['68%','52%'],['22%','80%'],['68%','80%']];
+  const step=()=>{btns.forEach((b,j)=>b.classList.toggle('on',j===tourIdx));if(cur){cur.style.left=pos[tourIdx][0];cur.style.top=pos[tourIdx][1]}tourIdx=(tourIdx+1)%btns.length};
+  step();tourTimer=setInterval(step,1600);
+}
+function stopTour(){if(tourTimer){clearInterval(tourTimer);tourTimer=null}}
+let paused=false;
+function loop(now){
+  const dt=Math.min((now-lastTime)/16.67,2);lastTime=now;
+  const pb=$('pauseBtn');if(pb)pb.classList.toggle('show',state==='playing');
+  if(state!=='playing'&&paused){paused=false;if(pb)pb.textContent='⏸ Pause';}
+  if(state==='playing'&&!paused)update(dt);
+  draw();
+  if(paused&&state==='playing'){
+    ctx.save();
+    ctx.fillStyle='rgba(4,10,8,.55)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#f3d27a';ctx.textAlign='center';
+    ctx.font='700 34px system-ui,sans-serif';ctx.fillText('⏸ PAUSED',c.width/2,c.height/2-8);
+    ctx.font='400 16px system-ui,sans-serif';ctx.fillText('Tap Pause to resume',c.width/2,c.height/2+24);
+    ctx.restore();
+  }
+  requestAnimationFrame(loop);
+}
+function update(dt){
+  const sf=slowFactor();
+  const lerp=effects.boost>0?0.5:0.25;
+  // Horizontal slide only (Doobie's ruling): finger/mouse slides left-right; the ship holds a fixed line near the bottom
+  if(keys.left)mouse.x-=7.5*dt;
+  if(keys.right)mouse.x+=7.5*dt;
+  mouse.x=Math.max(30,Math.min(W-30,mouse.x));
+  player.x+=(mouse.x-player.x)*lerp*dt;player.y=H-80;
+  player.x=Math.max(30,Math.min(W-30,player.x));
+  if(effects.boost>0&&Math.random()<.6)particles.push({x:player.x+(Math.random()*20-10),y:player.y+player.r,vx:0,vy:2.2,life:14,color:'#7be495',r:2});
+  if(buffs.rapid>0){buffs.rapid=Math.max(0,buffs.rapid-dt/60);if(buffs.rapid===0)updateHUD()}
+  let fxActive=false;
+  for(const k of['sidegun','slow','boost']){if(effects[k]>0){effects[k]=Math.max(0,effects[k]-dt/60);fxActive=true}}
+  if(fxActive){
+    const sig=Math.ceil(effects.sidegun)+'/'+Math.ceil(effects.slow)+'/'+Math.ceil(effects.boost);
+    if(sig!==hudSig){hudSig=sig;updateHUD()}
+  }
+  // Player fire follows the stage power curve: fireCd carries fractional intervals so the
+  // average rate matches fireIntervalFor(stage) instead of snapping to whole frames.
+  // Auto-fire ALWAYS (Doobie's ruling, 2026-10-31): firing must never move the fighter.
+  // The finger's only job is sliding the ship (mouse.x above); the old hold-to-fire gate
+  // welded the gun to the touch, so aiming dragged the fighter across the field.
+  fireCd-=dt;while(fireCd<=0){fireGuns();fireCd+=fireIntervalFor(stage)}
+  if(buffs.rapid>0&&Math.random()<.4)fireGuns();
+  if(stagePhase==='main'){
+    stageElapsed+=dt/60;
+    spawnTimer-=dt;
+    if(spawnTimer<=0){spawnEnemy();spawnTimer=Math.max(30,spawnInterval())}
+  }else if(stagePhase==='flurry'){
+    flurryTimer-=dt;
+    if(flurryLeft>0&&flurryTimer<=0){spawnRed();flurryLeft--;flurryTimer=9}
+    else if(flurryLeft<=0&&!enemies.some(e=>e.kind==='red')){
+      // Boss stages: the flurry clears the way for the boss. Pre-boss stages (before
+      // BOSS_FIRST_STAGE) end cleanly right here — quotas + flurry held the Line, no boss.
+      if(stage>=BOSS_FIRST_STAGE){stagePhase='boss';spawnBoss()}
+      else{stagePhase='done';stageComplete()}
+    }
+  }
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
+    if(b.life<=0||b.x<0||b.x>W||b.y<0||b.y>H){bullets.splice(i,1);continue}
+    for(let j=enemies.length-1;j>=0;j--){
+      const e=enemies[j];
+      if(Math.hypot(b.x-e.x,b.y-e.y)<e.r+b.r){
+        // Boss evasion (option-b fix): while the boss is mid-jink (dodgeT>0), 98% of connecting
+        // shots are slipped — a pale streak instead of damage. At ~44 shots/sec against a 112px-wide
+        // hull, relocation alone could not make shots miss (the bullet stream saturates the field);
+        // the jink itself is the dodge. When the boss pauses between jinks, fire lands normally.
+        if(e.kind==='boss'&&e.dodgeT>0&&Math.random()<0.98){sfx('slip');burst(b.x,b.y,'#bfe8ff',3);bullets.splice(i,1);break}
+        e.hp--;sfx('hit');burst(b.x,b.y,'#d4af37',6);bullets.splice(i,1);
+        if(e.hp<=0){
+          sfx(e.kind==='boss'?'boom':e.kind==='blue'?(e.vanguard?'heavy':'bluepop'):(e.form==='heavy'?'heavy':'pop'));
+          const pts=e.points*mult();score+=pts;stageScore+=pts;
+          burst(e.x,e.y,e.kind==='boss'?e.color:(e.kind==='blue'?'#37c8ff':chars[chosenChar].color),e.kind==='boss'?36:(e.kind==='blue'?22:14));
+          maybeDrop(e);enemies.splice(j,1);
+          if(e.kind==='boss'){stagePhase='done';stageComplete();return}
+          if(stagePhase==='main'){
+            stageKills++;
+            // Quota classes (2026-10-28 ruling): reds sort into small/medium by form; blues
+            // and vanguards are bonus targets and move NEITHER quota counter.
+            if(e.kind==='red'){if(e.form==='shadow'||e.form==='heavy')stageMedium++;else stageSmall++}
+            updateHUD();
+            if(stageSmall>=SMALL_QUOTA&&stageMedium>=MEDIUM_QUOTA&&stageElapsed>=STAGE_MIN_MAIN){stagePhase='flurry';flurryLeft=8;flurryTimer=0;banner={title:'FINAL WAVE',sub:stage>=BOSS_FIRST_STAGE?'Clear the flurry — something big approaches':'Clear the flurry — hold the Line',until:performance.now()+2400}}
+          }
+        }
+        break;
+      }
+    }
+  }
+  for(let i=enemyBullets.length-1;i>=0;i--){
+    const b=enemyBullets[i];b.x+=b.vx*dt;b.y+=b.vy*dt;
+    if(b.x<-24||b.x>W+24||b.y<-24||b.y>H+24){enemyBullets.splice(i,1);continue}
+    if(Math.hypot(b.x-player.x,b.y-player.y)<b.r+player.r*0.75){
+      enemyBullets.splice(i,1);burst(player.x,player.y,b.color,10);hitPlayer();
+      if(state!=='playing')return;
+    }
+  }
+  for(let i=drops.length-1;i>=0;i--){
+    const d=drops[i];d.age+=dt/60;d.y+=d.vy*dt;
+    if(d.age>9||d.y>H-46){drops.splice(i,1);continue}
+    if(Math.hypot(d.x-player.x,d.y-player.y)<d.r+player.r+4){applyDrop(d.kind);drops.splice(i,1)}
+  }
+  const redSpd=Math.min(1.6,1+0.07*(stage-1))*PHASES[phaseIdx()].spd*ENEMY_SPD;
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+    if(e.kind==='boss')moveBoss(e,dt,sf);
+    else if(e.kind==='blue')moveBlue(e,dt,sf*PHASES[phaseIdx()].spd*ENEMY_SPD);
+    else{e.wobble+=.1*dt;e.y+=e.vy*redSpd*sf*dt;e.x+=(e.vx+Math.sin(e.wobble)*.8)*sf*dt}
+    e.x=Math.max(e.r,Math.min(W-e.r,e.x));
+    if(e.y>0&&e.kind!=='boss'){e.fireT-=dt/60*(effects.slow>0?0.55:1);if(e.fireT<=0){enemyFire(e);e.fireT=e.kind==='blue'?1.5+Math.random()*0.6:(stage===1?3.6+Math.random()*1.2:2.1+Math.random()*0.9)}}
+    if(e.y>H-40){
+      burst(e.x,H-40,'#8b0000',20);
+      enemies.splice(i,1);hitPlayer();
+      if(state!=='playing')return;
+    }
+  }
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.15*dt;p.life-=dt;p.vx*=.97;
+    if(p.life<=0)particles.splice(i,1);
+  }
+}
+function draw(){
+  ctx.fillStyle='#0d1f17';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(42,74,56,.4)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  ctx.strokeStyle='#d4af37';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,H-30);ctx.lineTo(W,H-30);ctx.stroke();
+  const tint=['rgba(0,0,0,0)','rgba(24,44,96,.10)','rgba(64,12,44,.10)','rgba(84,44,0,.08)','rgba(44,0,64,.12)'][(stage-1)%5];
+  if(tint){ctx.fillStyle=tint;ctx.fillRect(0,0,W,H)}
+  if(!player)return;
+  for(const p of particles){ctx.globalAlpha=p.life/30;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.fill()}
+  ctx.globalAlpha=1;
+  for(const b of bullets){ctx.fillStyle='#f4ecd8';ctx.shadowBlur=12;ctx.shadowColor=chars[chosenChar].color;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,6.28);ctx.fill();ctx.shadowBlur=0}
+  for(const b of enemyBullets){
+    if(b.kind==='bossbeam'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));ctx.fillStyle=b.color;ctx.shadowBlur=12;ctx.shadowColor=b.color;ctx.fillRect(-11,-3,22,6);ctx.restore();ctx.shadowBlur=0;continue}
+    ctx.fillStyle=b.color;ctx.shadowBlur=12;ctx.shadowColor=b.color;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,6.28);ctx.fill();ctx.shadowBlur=0}
+  for(const e of enemies){
+    if(e.kind==='boss'){drawBoss(e);continue}
+    if(e.kind==='blue'){drawBlue(e);continue}
+    ctx.fillStyle=e.form==='shadow'?'#3d0f1c':e.form==='runner'?'#6e1a1a':e.form==='heavy'?'#7e1c10':'#5a1414';
+    ctx.strokeStyle='#e33b2e';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,6.28);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ff6b57';ctx.beginPath();ctx.arc(e.x,e.y,e.r*.35,0,6.28);ctx.fill();
+    if(e.form==='heavy'){
+      ctx.strokeStyle='#ffb199';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(e.x,e.y,e.r*.66,0,6.28);ctx.stroke();
+      if(e.hp<e.maxhp){ctx.fillStyle='#ffb199';for(let k=0;k<e.hp;k++)ctx.fillRect(e.x-(e.hp*7-2)/2+k*7,e.y-e.r-9,5,3)}
+    }
+    if(e.form==='shadow'&&e.hp<e.maxhp){ctx.fillStyle='#ff9d8a';for(let k=0;k<e.hp;k++)ctx.fillRect(e.x-(e.hp*7-2)/2+k*7,e.y-e.r-9,5,3)}
+  }
+  for(const d of drops){
+    const col=d.kind==='sidegun'?'#d4af37':d.kind==='slow'?'#37c8ff':'#7be495';
+    ctx.globalAlpha=d.age>7?(Math.sin(d.age*14)>0?1:0.25):1;
+    ctx.shadowBlur=14;ctx.shadowColor=col;ctx.fillStyle='#10261a';ctx.strokeStyle=col;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(d.x,d.y,d.r+Math.sin(d.age*5)*1.5,0,6.28);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle=col;
+    if(d.kind==='sidegun'){ctx.fillRect(d.x-1.5,d.y-6,3,12);ctx.fillRect(d.x-6,d.y-1.5,12,3)}
+    else{ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(d.kind==='slow'?'❄':'»',d.x,d.y+1)}
+    ctx.globalAlpha=1;
+  }
+  const col=chars[chosenChar];
+  ctx.shadowBlur=20;ctx.shadowColor=col.color;ctx.fillStyle=col.color;ctx.beginPath();ctx.arc(player.x,player.y,player.r,0,6.28);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle=col.accent;ctx.beginPath();ctx.arc(player.x,player.y,player.r*.5,0,6.28);ctx.fill();
+  ctx.fillStyle='#f4ecd8';ctx.fillRect(player.x-3,player.y-player.r-8,6,12);
+  if(banner&&state==='playing'){
+    const left=banner.until-performance.now();
+    if(left>0){
+      ctx.globalAlpha=Math.min(1,left/600);
+      // Banners live in the bottom band, small, bottom-right (Doobie's rules, pass 2 +
+      // 2026-10-28 ~14:37): no toast, banner, ad, or info element ever covers the
+      // fighter or the fight area mid-fight. They sit above the bottom HUD strip,
+      // clear of the toast stack on the left.
+      ctx.textAlign='right';ctx.textBaseline='alphabetic';
+      ctx.fillStyle='#d4af37';ctx.font='bold 17px Georgia';ctx.fillText(banner.title,W-14,H-160);
+      ctx.fillStyle='#f4ecd8';ctx.font='11px Georgia';ctx.fillText(banner.sub,W-14,H-144);
+      ctx.globalAlpha=1;
+    }else banner=null;
+  }
+  // Boss health bar — bottom band, centered (Doobie's ruling, 2026-10-28 ~14:37).
+  // Drawn only while a boss is alive and no banner is up (the ⚠ BOSS ⚠ announcement
+  // gets the band to itself for its 2.6s; the bar takes over as the fight begins).
+  if(state==='playing'&&!banner){
+    const boss=enemies.find(e=>e.kind==='boss');
+    if(boss){
+      const bw=Math.min(440,W*0.72),bx=(W-bw)/2;
+      ctx.textAlign='center';ctx.textBaseline='alphabetic';
+      ctx.fillStyle='#f4ecd8';ctx.font='bold 11px Georgia';ctx.fillText(boss.name||'BOSS',W/2,H-134);
+      ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(bx,H-128,bw,8);
+      ctx.fillStyle=boss.color;ctx.fillRect(bx,H-128,bw*Math.max(0,boss.hp/boss.maxhp),8);
+      ctx.strokeStyle='rgba(212,175,55,.5)';ctx.lineWidth=1;ctx.strokeRect(bx,H-128,bw,8);
+    }
+  }
+}
+async function endGame(){
+  sfx('boom');
+  // Banking rule: submit ONLY the banked total — points from stages the player completed.
+  // The stage they died on contributes nothing (its stageScore is discarded with the run).
+  buffs.double=0;const s=Math.min(bankedScore,200000);
+  showScreen('over');
+  $('runPoints').textContent=bankedScore;$('finalBalance').textContent='Saving…';
+  await rpc('submit_run',{p_score:s});
+  $('finalBalance').textContent='$'+usd(P.points);
+}
+
+// Controls (Doobie's phone scheme, verified pass 2, 2026-10-28): ONE finger holds and drags
+// the fighter back and forth; a SECOND finger held down shoots. Pointers are tracked per
+// pointerId so the roles never fight: the first touch steers (the ship follows its x), and
+// firing starts only when a second simultaneous touch lands. Before this pass, a single
+// touch did both — steering and firing were the same finger, and a second finger hijacked
+// the aim and could cut the fire. A mouse stays single-pointer play, as on desktop before:
+// moving steers (even unpressed) and holding the button fires.
+const pointers=new Map();
+function syncPointers(){
+  const ts=[...pointers.values()];
+  if(ts.length)mouse.x=ts[0].x;
+  mouse.down=ts.length>=2||(ts.length===1&&ts[0].type==='mouse');
+}
+c.addEventListener('pointerdown',e=>{if(state!=='playing')return;const r=c.getBoundingClientRect();pointers.set(e.pointerId,{x:e.clientX-r.left,type:e.pointerType});syncPointers()});
+c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();const p=pointers.get(e.pointerId);if(p){p.x=e.clientX-r.left;syncPointers()}else if(e.pointerType==='mouse'&&state==='playing')mouse.x=e.clientX-r.left});
+c.addEventListener('pointerup',e=>{if(pointers.delete(e.pointerId))syncPointers()});
+c.addEventListener('pointercancel',e=>{if(pointers.delete(e.pointerId))syncPointers()});
+c.addEventListener('pointerleave',e=>{if(pointers.delete(e.pointerId))syncPointers()});
+window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=true;if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=true});
+window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=false;if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=false});
+$('spotContinue').onclick=()=>{$('spotContinue').disabled=true;veil(()=>{clearInterval(spotTimer);stopTour();showScreen('stageDone')})};
+$('sndBtn').onclick=e=>{e.stopPropagation();muted=!muted;$('sndBtn').textContent=muted?'🔇 Sound off':'🔊 Sound on';if(!muted){ac();sfx('pickup')}};
+
+document.querySelectorAll('.char-btn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.char-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');chosenChar=b.dataset.char}));
+$('start').onclick=$('again').onclick=startRun;
+$('nextStageBtn').onclick=()=>{showScreen('game');beginStage(stage+1)};
+$('openShop').onclick=()=>showScreen('shop');
+$('openPower').onclick=()=>showScreen('power');
+$('cashItem').onclick=()=>{
+  if(bal()>=50)showScreen('payout');
+  else showToast('You need $50.00. You have $'+bal().toFixed(2)+'. Keep fighting.');
+};
+  $('handle').insertAdjacentHTML('afterend','<input id="email" type="email" placeholder="Your email (to confirm your payout)" autocomplete="email">');
+$('submitPayout').onclick=async()=>{
+  const handle=$('handle').value.trim();
+  if(handle.length<3){showToast('Enter your payout handle.');return}
+  if(await rpc('request_payout',{p_method:$('method').value,p_handle:handle,p_email:$('email').value.trim()})){
+    $('handle').value='';showToast('Request received! Reviewed within 3–5 business days. Un Ya\'U.');showScreen('menu');
+  }
+};
+document.querySelectorAll('.powerup').forEach(p=>p.addEventListener('click',async()=>{
+  if(await rpc('buy_powerup',{p_kind:p.dataset.power})){showToast('Purchased! It will be used in your next run.');updatePower()}
+}));
+$('claimDaily').onclick=async()=>{
+  if(await rpc('claim_daily')){showToast('+250 points credited. Ra\'Ki\'len de U.');updateMenu()}
+};
+function watchAd(){
+  if(adBusy||!P)return;
+  adBusy=true;let s=30;showToast('Ad playing… '+s+'s');
+  const t=setInterval(async()=>{
+    s--;
+    if(s>0){showToast('Ad playing… '+s+'s');return}
+    clearInterval(t);
+    if(await rpc('credit_ad')){
+      showToast('+6 points credited. Un Ya\'U.');
+      if(state==='shop')updateShop();
+      if(state==='over')$('finalBalance').textContent='$'+usd(P.points);
+    }
+    adBusy=false;
+  },1000);
+}
+
+async function boot(){
+  $('bootMsg').textContent='Connecting to the Kingdom…';
+  $('retry').classList.add('hidden');
+  try{
+    const {data:{session}} = await sb.auth.getSession();
+    if(session){
+      const {data,error} = await sb.rpc('ensure_profile');
+      if(error) throw error;
+      P = data;
+      showScreen('menu');
+      if(P.runs===0 && P.points===2000) showToast('Welcome back, guardian!');
+    } else {
+      showScreen('login');
+    }
+  } catch(e){
+    $('bootMsg').textContent='Could not connect: '+(e.message||e);
+    $('retry').classList.remove('hidden');
+  }
+}
+
+// Add this new Auth Logic at the bottom, before `resize(); requestAnimationFrame(loop); boot();`
+$('sendCode').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    showToast('Please enter a valid email.');
+    return;
+  }
+  $('loginMsg').textContent = 'Sending code...';
+  const { error } = await sb.auth.signInWithOtp({ 
+    email: email,
+    options: { shouldCreateUser: true } 
+  });
+  if(error) {
+    $('loginMsg').textContent = 'Error: ' + error.message;
+  } else {
+    $('loginMsg').textContent = 'Code sent! Check your inbox.';
+    $('sendCode').classList.add('hidden');
+    $('otpSection').classList.remove('hidden');
+  }
+};$('verifyCode').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  const token = $('otpCode').value.trim();
+  if(!token) return;
+  
+  $('loginMsg').textContent = 'Verifying...';
+  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  
+  if(error) {
+    $('loginMsg').textContent = 'Invalid code. Try again.';
+  } else {
+    const {data: profileData, error: profileError} = await sb.rpc('ensure_profile');
+    if(profileError) {
+      $('loginMsg').textContent = 'Profile error: ' + profileError.message;
+    } else {
+      P = profileData;
+      showScreen('menu');
+      if(P.runs===0 && P.points===2000) showToast('Welcome, guardian! +2,000 pts to start.');
+    }
+  }
+};
+  
+
+$('verifyCode').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  const token = $('otpCode').value.trim();
+  if(!token) return;
+  
+  $('loginMsg').textContent = 'Verifying...';
+  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  
+  if(error) {
+    $('loginMsg').textContent = 'Invalid code. Try again.';
+  } else {
+    const {data: profileData, error: profileError} = await sb.rpc('ensure_profile');
+    if(profileError) {
+      $('loginMsg').textContent = 'Profile error: ' + profileError.message;
+    } else {
+      P = profileData;
+      showScreen('menu');
+      if(P.runs===0 && P.points===2000) showToast('Welcome, guardian! +2,000 pts to start.');
+    }
+  }
+};
+$('retry').onclick=boot;
+$('pauseBtn').addEventListener('click',e=>{e.stopPropagation();if(state!=='playing')return;paused=!paused;$('pauseBtn').textContent=paused?'▶ Resume':'⏸ Pause';});
+resize();requestAnimationFrame(loop);boot();
+</script>
+</body>
+</html>
