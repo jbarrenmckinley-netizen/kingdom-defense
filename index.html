@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0d1f17">
-<title>Kingdom Defense — Dgireahia</title>
+<title>Kingdom Defense — DGIREAH</title>
 <style>
 :root{color-scheme:dark}
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 .hidden{display:none!important}
-screen{padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px)) !important}
+.screen{padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px)) !important}
   body{font-family:Georgia,serif;background:#0a1a12;color:#f4ecd8;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
 #game{position:relative;width:100vw;height:100vh;max-width:500px;max-height:900px;background:#0d1f17;overflow:hidden}
 canvas{display:block;width:100%;height:100%}
@@ -89,13 +89,13 @@ input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px 
 <div id="powerStatus"></div>
 
 <div id="boot" class="screen">
-  <h1>KINGDOM DEFENSE</h1><h2>Dgireahia · Land of Provision</h2>
+  <h1>KINGDOM DEFENSE</h1><h2>DGIREAH · Land of Provision</h2>
   <div class="sub" id="bootMsg">Connecting to the Kingdom…</div>
   <button class="btn hidden" id="retry">Retry</button>
 </div>
   <div id="login" class="screen hidden">
   <h1>KINGDOM DEFENSE</h1>
-  <h2>Dgireahia · Land of Provision</h2>
+  <h2>DGIREAH · Land of Provision</h2>
   <div class="sub">Enter your email to receive a login code.</div>
   <input id="loginEmail" type="email" placeholder="Your email address" autocomplete="email">
   <button class="btn" id="sendCode">Send Login Code</button>
@@ -103,12 +103,14 @@ input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px 
   <div id="otpSection" class="hidden">
     <input id="otpCode" type="text" placeholder="Enter 6-digit code" maxlength="6" style="text-align:center; font-size:18px; letter-spacing:4px;">
     <button class="btn" id="verifyCode">Verify & Enter</button>
+    <button class="btn secondary" id="resendCode" style="padding:8px 20px;font-size:12px">Resend code</button>
+    <button class="btn secondary" id="changeEmail" style="padding:8px 20px;font-size:12px">Use a different email</button>
   </div>
   <div class="note" id="loginMsg"></div>
   </div>
 
 <div id="menu" class="screen hidden">
-  <h1>KINGDOM DEFENSE</h1><h2>Dgireahia · Land of Provision</h2>
+  <h1>KINGDOM DEFENSE</h1><h2>DGIREAH · Land of Provision</h2>
   <div class="sub">Choose your guardian. Hold the line. Earn $50 and cash out.</div>
   <div class="char-select">
     <button class="char-btn active" data-char="king"><span class="name">King</span><span class="role">Rider</span></button>
@@ -117,7 +119,7 @@ input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px 
   </div>
   <div id="daily" class="card hidden">
     <div class="note" style="margin:0">DAILY KINGDOM BLESSING</div>
-    <div class="reward">+1,000 pts</div>
+    <div class="reward">+250 pts</div>
     <button class="btn" id="claimDaily" style="padding:8px 20px;font-size:12px">Claim</button>
   </div>
   <div class="note" id="firstRuns"></div>
@@ -158,7 +160,7 @@ input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px 
   <div class="stat"><span class="k">Your Balance</span><span class="v" id="powerBalance">$0.00</span></div>
   <div class="note" id="owned"></div>
   <div class="note">Bought with your earned balance, not real money. Used automatically in your next run.</div>
-  <div class="powerup" data-power="rapid"><div><div class="ptitle">Rapid Fire</div><div class="pdesc">Auto-fire for 60 seconds of play.</div></div><div class="pbuy">$0.99</div></div>
+  <!-- Rapid Fire removed from the Armory (owner's ruling, 2026-11-02): auto-fire is never sold — it exists only as the Stage 8/9 pickup. -->
   <div class="powerup" data-power="shield"><div><div class="ptitle">Shield of Buddha</div><div class="pdesc">Absorbs 3 hits.</div></div><div class="pbuy">$1.99</div></div>
   <div class="powerup" data-power="double"><div><div class="ptitle">Double Points</div><div class="pdesc">2x points for one run.</div></div><div class="pbuy">$1.49</div></div>
   <div class="powerup" data-power="revive"><div><div class="ptitle">Revive Token</div><div class="pdesc">Continue once after losing all lives.</div></div><div class="pbuy">$2.99</div></div>
@@ -166,7 +168,7 @@ input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px 
 </div>
 
 <div id="stageDone" class="screen hidden">
-  <h1 id="stageTitle">STAGE 1 HELD</h1><h2>Kingdom Defense · DGIREAHIA</h2>
+  <h1 id="stageTitle">STAGE 1 HELD</h1><h2>Kingdom Defense · DGIREAH</h2>
   <div class="story" id="stageStory"></div>
   <div class="note" id="stageNext"></div>
   <div class="note">A story cinematic will play in this break — coming soon.</div>
@@ -196,7 +198,7 @@ input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px 
       <div class="spotBrand">NEW NATION NEWS</div>
       <div class="spotTitle">The Countdown Is On</div>
       <div class="spotLine">The countdown is on — New Nation News.</div>
-      <div class="spotLine">DGIREAHIA goes live October 31 · 11:11 PM. Be watching when the balloons rise.</div>
+      <div class="spotLine">DGIREAH goes live October 31 · 11:11 PM. Be watching when the balloons rise.</div>
     </div>
   </div>
   <div class="spotPane hidden" id="spot-tour">
@@ -248,7 +250,7 @@ function resize(){const r=c.getBoundingClientRect();c.width=r.width*devicePixelR
 window.addEventListener('resize',resize);
 
 let P=null,state='boot',chosenChar='king',player,bullets=[],enemies=[],enemyBullets=[],drops=[],particles=[],score=0,lives=3,spawnTimer,lastTime,mouse,toastT,adBusy=false,inv={shield:0,revive:0},shieldHits=0;
-let buffs={rapid:0,double:0};
+let buffs={double:0};
 let stage=1,stageKills=0,stageGoal=40,banner=null;
 let stageSmall=0,stageMedium=0,redSpawned=0,mediumSpawned=0;
 // Per-stage score banking (Doobie's ruling, 2026-10-28 pass 2): `score` stays the DISPLAYED
@@ -310,7 +312,7 @@ const BOSS_FIRST_STAGE=2;
 // enter (see spawnRed's fireT), so return fire is a real presence from early on, just slow.
 // Stage 1 is reds only, and still has no boss.
 const S1_OPENING_SMALLS=55,S1_BULLET_SPEED=1.6;
-let effects={sidegun:0,slow:0,boost:0},hudSig='';
+let effects={sidegun:0,slow:0,boost:0,autofire:0},hudSig='',autoDropped=false;
 const chars={king:{color:'#40E0D0',accent:'#008080'},buddha:{color:'#2a4a38',accent:'#d4af37'},matthias:{color:'#1a1a1a',accent:'#8b0000'}};
 const usd=p=>(p/1000).toFixed(2);
 const bal=()=>P?P.points/1000:0;
@@ -341,7 +343,7 @@ function updateMenu(){
 function updateShop(){$('shopBalance').textContent='$'+usd(P.points);$('shopProgress').style.width=Math.min(100,bal()/50*100)+'%'}
 function updatePower(){
   $('powerBalance').textContent='$'+usd(P.points);
-  $('owned').textContent='Owned: Rapid x'+P.inv_rapid+' · Shield x'+P.inv_shield+' · Double x'+P.inv_double+' · Revive x'+P.inv_revive;
+  $('owned').textContent='Owned: Shield x'+P.inv_shield+' · Double x'+P.inv_double+' · Revive x'+P.inv_revive;
 }
 function updateHUD(){
   if(!P)return;
@@ -349,7 +351,7 @@ function updateHUD(){
   $('balance').textContent='$'+usd(P.points+(state==='playing'?score:0));
   $('hearts').textContent='♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,3-lives));
   const a=[];
-  if(buffs.rapid>0)a.push('RAPID');
+  if(effects.autofire>0)a.push('AUTO-FIRE '+Math.ceil(effects.autofire)+'s');
   if(state==='playing'&&mult()===2)a.push('2x');
   if(shieldHits>0)a.push('SHIELD x'+shieldHits);
   if(inv.revive>0)a.push('REVIVE');
@@ -366,11 +368,10 @@ document.querySelectorAll('.gfm').forEach(b=>b.onclick=openGFM);
 async function startRun(){
   showScreen('game');resize();
   player={x:W/2,y:H-80,r:22};bullets=[];enemies=[];enemyBullets=[];drops=[];particles=[];score=0;bankedScore=0;stageScore=0;lives=3;spawnTimer=0;
-  buffs={rapid:0,double:0};effects={sidegun:0,slow:0,boost:0};hudSig='';shieldHits=0;inv={shield:P.inv_shield,revive:P.inv_revive};
+  buffs={double:0};effects={sidegun:0,slow:0,boost:0,autofire:0};autoDropped=false;hudSig='';shieldHits=0;inv={shield:P.inv_shield,revive:P.inv_revive};
   clearInterval(spotTimer);stopTour();
   lastTime=performance.now();mouse={x:W/2,down:false};pointers.clear();
-  const owned={rapid:P.inv_rapid>0,double:P.inv_double>0};
-  if(owned.rapid){buffs.rapid=60;rpc('use_powerup',{p_kind:'rapid'})}
+  const owned={double:P.inv_double>0};
   if(owned.double){buffs.double=1;rpc('use_powerup',{p_kind:'double'})}
   beginStage(1);
   updateHUD();
@@ -617,6 +618,14 @@ function maybeDrop(e){
   // Stage 1 (Doobie's calibration ruling): exactly ONE power-up all stage, and it is the SIDE GUNS.
   // If the random roll hasn't produced it by halfway through the stage, the next red kill forces it.
   if(stage===1&&stageDrops===0&&stageKills>=stageGoal*0.5)ch=1;
+  // AUTO-FIRE pickup (owner's ruling, 2026-11-02): stages 8 and 9 only — once per stage,
+  // forced by halfway through the stage; never while one is already active (not stackable);
+  // never sold. The random kinds below can never produce it, and no other stage drops it.
+  if((stage===8||stage===9)&&!autoDropped&&effects.autofire<=0&&stageKills>=stageGoal*0.5){
+    autoDropped=true;stageDrops++;
+    drops.push({x:e.x,y:e.y,vy:4.4,r:11,kind:'autofire',age:0});
+    return;
+  }
   if(Math.random()<ch){
     stageDrops++;
     const kinds=['sidegun','slow','boost'];
@@ -627,6 +636,7 @@ function applyDrop(k){
   sfx('pickup');
   if(k==='sidegun'){effects.sidegun=30;showToast('Power-up: SIDE GUN — twin fire for 30s!')}
   else if(k==='slow'){effects.slow=5+Math.random();showToast('Power-up: SLOW — the enemy crawls!')}
+  else if(k==='autofire'){if(effects.autofire<=0){effects.autofire=10;fireCd=0;showToast('Power-up: AUTO-FIRE — 10 seconds!')}else{showToast('AUTO-FIRE already running!')}}
   else{effects.boost=5+Math.random()*2;showToast('Power-up: BOOST — guardian speed up!')}
   hudSig='';
   burst(player.x,player.y-10,'#d4af37',12);updateHUD();
@@ -644,15 +654,15 @@ function stageSub(n){return n===1?'The Threat Revealed':n===2?'Blue Fighters App
 function storyFor(f,t){
   if(f===1)return 'The first wave breaks against the Line — but the scouts were only the shadow of what follows. On the horizon, larger ships gather: blue fighters, swift and merciless. The threat is real now. Hold the Line.';
   if(f===2)return 'The blue fighters have shown what they can do, and the Kingdom counts the cost. Every guardian who stands buys time for those behind the Line. Stand firmer — the enemy quickens.';
-  if(f===3)return 'Between battles, the guardians remember why they fight: the fields, the families, the light of DGIREAHIA at dawn. A kingdom worth defending is a people worth knowing. The Line holds because love holds it.';
+  if(f===3)return 'Between battles, the guardians remember why they fight: the fields, the families, the light of DGIREAH at dawn. A kingdom worth defending is a people worth knowing. The Line holds because love holds it.';
   if(f===4)return 'The enemy sends its champion — a vanguard ship of terrible size, wreathed in fire of many colors. If the Line breaks here, all is open. Guardians, this is the hour. Stand.';
-  if(f===5)return 'The champion falls, and still the dark presses in — new colors on the horizon, new dangers gathering. The story of DGIREAHIA is written by those who refuse to move. Onward.';
-  return 'The Line holds another day, and the enemy returns in greater strength. The guardians of DGIREAHIA do not tire. Stage '+t+' begins.';
+  if(f===5)return 'The champion falls, and still the dark presses in — new colors on the horizon, new dangers gathering. The story of DGIREAH is written by those who refuse to move. Onward.';
+  return 'The Line holds another day, and the enemy returns in greater strength. The guardians of DGIREAH do not tire. Stage '+t+' begins.';
 }
 function beginStage(n){
   stage=n;stageKills=0;stageGoal=SMALL_QUOTA+MEDIUM_QUOTA;
   stageSmall=0;stageMedium=0;redSpawned=0;mediumSpawned=0;stageScore=0;
-  stageElapsed=0;stagePhase='main';flurryLeft=0;flurryTimer=0;stageDrops=0;dropBudget=dropBudgetFor(n);
+  stageElapsed=0;stagePhase='main';flurryLeft=0;flurryTimer=0;stageDrops=0;dropBudget=dropBudgetFor(n);autoDropped=false;
   enemies.length=0;enemyBullets.length=0;drops.length=0;bullets.length=0;
   spawnTimer=30;
   if(mouse)mouse.down=false;
@@ -741,20 +751,20 @@ function update(dt){
   player.x+=(mouse.x-player.x)*lerp*dt;player.y=H-80;
   player.x=Math.max(30,Math.min(W-30,player.x));
   if(effects.boost>0&&Math.random()<.6)particles.push({x:player.x+(Math.random()*20-10),y:player.y+player.r,vx:0,vy:2.2,life:14,color:'#7be495',r:2});
-  if(buffs.rapid>0){buffs.rapid=Math.max(0,buffs.rapid-dt/60);if(buffs.rapid===0)updateHUD()}
   let fxActive=false;
-  for(const k of['sidegun','slow','boost']){if(effects[k]>0){effects[k]=Math.max(0,effects[k]-dt/60);fxActive=true}}
+  for(const k of['sidegun','slow','boost','autofire']){if(effects[k]>0){effects[k]=Math.max(0,effects[k]-dt/60);fxActive=true}}
   if(fxActive){
-    const sig=Math.ceil(effects.sidegun)+'/'+Math.ceil(effects.slow)+'/'+Math.ceil(effects.boost);
+    const sig=Math.ceil(effects.sidegun)+'/'+Math.ceil(effects.slow)+'/'+Math.ceil(effects.boost)+'/'+Math.ceil(effects.autofire);
     if(sig!==hudSig){hudSig=sig;updateHUD()}
   }
-  // Player fire follows the stage power curve: fireCd carries fractional intervals so the
-  // average rate matches fireIntervalFor(stage) instead of snapping to whole frames.
-  // Auto-fire ALWAYS (Doobie's ruling, 2026-10-31): firing must never move the fighter.
-  // The finger's only job is sliding the ship (mouse.x above); the old hold-to-fire gate
-  // welded the gun to the touch, so aiming dragged the fighter across the field.
-  fireCd-=dt;while(fireCd<=0){fireGuns();fireCd+=fireIntervalFor(stage)}
-  if(buffs.rapid>0&&Math.random()<.4)fireGuns();
+  // Fire control (owner's rulings, 2026-11-02 — superseding the 2026-10-31 auto-fire-always
+  // build): normal play is TAP TO SHOOT — each tap fires one volley (canvas pointerdown
+  // handler below); sliding never fires. The ONLY auto-fire in the game is the Stage 8/9
+  // AUTO-FIRE pickup: while effects.autofire runs down (~10s) the guns fire on the stage
+  // power curve (fireCd carries fractional intervals so the average rate matches
+  // fireIntervalFor(stage)); when it expires, tap-to-shoot resumes.
+  if(effects.autofire>0){fireCd-=dt;while(fireCd<=0){fireGuns();fireCd+=fireIntervalFor(stage)}}
+  else fireCd=0;
   if(stagePhase==='main'){
     stageElapsed+=dt/60;
     spawnTimer-=dt;
@@ -860,13 +870,13 @@ function draw(){
     if(e.form==='shadow'&&e.hp<e.maxhp){ctx.fillStyle='#ff9d8a';for(let k=0;k<e.hp;k++)ctx.fillRect(e.x-(e.hp*7-2)/2+k*7,e.y-e.r-9,5,3)}
   }
   for(const d of drops){
-    const col=d.kind==='sidegun'?'#d4af37':d.kind==='slow'?'#37c8ff':'#7be495';
+    const col=d.kind==='sidegun'?'#d4af37':d.kind==='slow'?'#37c8ff':d.kind==='autofire'?'#ff8c1a':'#7be495';
     ctx.globalAlpha=d.age>7?(Math.sin(d.age*14)>0?1:0.25):1;
     ctx.shadowBlur=14;ctx.shadowColor=col;ctx.fillStyle='#10261a';ctx.strokeStyle=col;ctx.lineWidth=2;
     ctx.beginPath();ctx.arc(d.x,d.y,d.r+Math.sin(d.age*5)*1.5,0,6.28);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
     ctx.fillStyle=col;
     if(d.kind==='sidegun'){ctx.fillRect(d.x-1.5,d.y-6,3,12);ctx.fillRect(d.x-6,d.y-1.5,12,3)}
-    else{ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(d.kind==='slow'?'❄':'»',d.x,d.y+1)}
+    else{ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(d.kind==='slow'?'❄':d.kind==='autofire'?'A':'»',d.x,d.y+1)}
     ctx.globalAlpha=1;
   }
   const col=chars[chosenChar];
@@ -926,7 +936,7 @@ function syncPointers(){
   if(ts.length)mouse.x=ts[0].x;
   mouse.down=ts.length>=2||(ts.length===1&&ts[0].type==='mouse');
 }
-c.addEventListener('pointerdown',e=>{if(state!=='playing')return;const r=c.getBoundingClientRect();pointers.set(e.pointerId,{x:e.clientX-r.left,type:e.pointerType});syncPointers()});
+c.addEventListener('pointerdown',e=>{if(state!=='playing')return;const r=c.getBoundingClientRect();pointers.set(e.pointerId,{x:e.clientX-r.left,type:e.pointerType});syncPointers();if(!paused)fireGuns()});
 c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();const p=pointers.get(e.pointerId);if(p){p.x=e.clientX-r.left;syncPointers()}else if(e.pointerType==='mouse'&&state==='playing')mouse.x=e.clientX-r.left});
 c.addEventListener('pointerup',e=>{if(pointers.delete(e.pointerId))syncPointers()});
 c.addEventListener('pointercancel',e=>{if(pointers.delete(e.pointerId))syncPointers()});
@@ -996,8 +1006,8 @@ async function boot(){
   }
 }
 
-// Add this new Auth Logic at the bottom, before `resize(); requestAnimationFrame(loop); boot();`
-$('sendCode').onclick = async () => {
+// Auth Logic — email OTP sign-in (send code / verify code / resend / change email).
+async function sendLoginCode() {
   const email = $('loginEmail').value.trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     showToast('Please enter a valid email.');
@@ -1015,7 +1025,9 @@ $('sendCode').onclick = async () => {
     $('sendCode').classList.add('hidden');
     $('otpSection').classList.remove('hidden');
   }
-};$('verifyCode').onclick = async () => {
+}
+$('sendCode').onclick = sendLoginCode;
+$('verifyCode').onclick = async () => {
   const email = $('loginEmail').value.trim();
   const token = $('otpCode').value.trim();
   if(!token) return;
@@ -1038,26 +1050,13 @@ $('sendCode').onclick = async () => {
 };
   
 
-$('verifyCode').onclick = async () => {
-  const email = $('loginEmail').value.trim();
-  const token = $('otpCode').value.trim();
-  if(!token) return;
-  
-  $('loginMsg').textContent = 'Verifying...';
-  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-  
-  if(error) {
-    $('loginMsg').textContent = 'Invalid code. Try again.';
-  } else {
-    const {data: profileData, error: profileError} = await sb.rpc('ensure_profile');
-    if(profileError) {
-      $('loginMsg').textContent = 'Profile error: ' + profileError.message;
-    } else {
-      P = profileData;
-      showScreen('menu');
-      if(P.runs===0 && P.points===2000) showToast('Welcome, guardian! +2,000 pts to start.');
-    }
-  }
+$('resendCode').onclick = () => { sendLoginCode(); };
+$('changeEmail').onclick = () => {
+  $('otpSection').classList.add('hidden');
+  $('sendCode').classList.remove('hidden');
+  $('otpCode').value = '';
+  $('loginMsg').textContent = 'Enter your email to receive a login code.';
+  $('loginEmail').focus();
 };
 $('retry').onclick=boot;
 $('pauseBtn').addEventListener('click',e=>{e.stopPropagation();if(state!=='playing')return;paused=!paused;$('pauseBtn').textContent=paused?'▶ Resume':'⏸ Pause';});
