@@ -160,7 +160,8 @@ input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px 
   <div class="stat"><span class="k">Your Balance</span><span class="v" id="powerBalance">$0.00</span></div>
   <div class="note" id="owned"></div>
   <div class="note">Bought with your earned balance, not real money. Used automatically in your next run.</div>
-  <!-- Rapid Fire removed from the Armory (owner's ruling, 2026-11-02): auto-fire is never sold — it exists only as the Stage 8/9 pickup. -->
+  <!-- Rapid Fire RESTORED to the Armory (owner's clarified ruling, 2026-11-02 evening): auto-fire is not EARNED until stages 8/9 (the pickup) — that gate is what makes it worth buying early. Anyone who wants the firepower sooner may purchase it here. -->
+  <div class="powerup" data-power="rapid"><div><div class="ptitle">Rapid Fire</div><div class="pdesc">Auto-fire for 60 seconds of play.</div></div><div class="pbuy">$0.99</div></div>
   <div class="powerup" data-power="shield"><div><div class="ptitle">Shield of Buddha</div><div class="pdesc">Absorbs 3 hits.</div></div><div class="pbuy">$1.99</div></div>
   <div class="powerup" data-power="double"><div><div class="ptitle">Double Points</div><div class="pdesc">2x points for one run.</div></div><div class="pbuy">$1.49</div></div>
   <div class="powerup" data-power="revive"><div><div class="ptitle">Revive Token</div><div class="pdesc">Continue once after losing all lives.</div></div><div class="pbuy">$2.99</div></div>
@@ -250,7 +251,7 @@ function resize(){const r=c.getBoundingClientRect();c.width=r.width*devicePixelR
 window.addEventListener('resize',resize);
 
 let P=null,state='boot',chosenChar='king',player,bullets=[],enemies=[],enemyBullets=[],drops=[],particles=[],score=0,lives=3,spawnTimer,lastTime,mouse,toastT,adBusy=false,inv={shield:0,revive:0},shieldHits=0;
-let buffs={double:0};
+let buffs={rapid:0,double:0};
 let stage=1,stageKills=0,stageGoal=40,banner=null;
 let stageSmall=0,stageMedium=0,redSpawned=0,mediumSpawned=0;
 // Per-stage score banking (Doobie's ruling, 2026-10-28 pass 2): `score` stays the DISPLAYED
@@ -343,7 +344,7 @@ function updateMenu(){
 function updateShop(){$('shopBalance').textContent='$'+usd(P.points);$('shopProgress').style.width=Math.min(100,bal()/50*100)+'%'}
 function updatePower(){
   $('powerBalance').textContent='$'+usd(P.points);
-  $('owned').textContent='Owned: Shield x'+P.inv_shield+' · Double x'+P.inv_double+' · Revive x'+P.inv_revive;
+  $('owned').textContent='Owned: Rapid x'+P.inv_rapid+' · Shield x'+P.inv_shield+' · Double x'+P.inv_double+' · Revive x'+P.inv_revive;
 }
 function updateHUD(){
   if(!P)return;
@@ -352,6 +353,7 @@ function updateHUD(){
   $('hearts').textContent='♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,3-lives));
   const a=[];
   if(effects.autofire>0)a.push('AUTO-FIRE '+Math.ceil(effects.autofire)+'s');
+  if(buffs.rapid>0)a.push('RAPID '+Math.ceil(buffs.rapid)+'s');
   if(state==='playing'&&mult()===2)a.push('2x');
   if(shieldHits>0)a.push('SHIELD x'+shieldHits);
   if(inv.revive>0)a.push('REVIVE');
@@ -368,10 +370,11 @@ document.querySelectorAll('.gfm').forEach(b=>b.onclick=openGFM);
 async function startRun(){
   showScreen('game');resize();
   player={x:W/2,y:H-80,r:22};bullets=[];enemies=[];enemyBullets=[];drops=[];particles=[];score=0;bankedScore=0;stageScore=0;lives=3;spawnTimer=0;
-  buffs={double:0};effects={sidegun:0,slow:0,boost:0,autofire:0};autoDropped=false;hudSig='';shieldHits=0;inv={shield:P.inv_shield,revive:P.inv_revive};
+  buffs={rapid:0,double:0};effects={sidegun:0,slow:0,boost:0,autofire:0};autoDropped=false;hudSig='';shieldHits=0;inv={shield:P.inv_shield,revive:P.inv_revive};
   clearInterval(spotTimer);stopTour();
   lastTime=performance.now();mouse={x:W/2,down:false};pointers.clear();
-  const owned={double:P.inv_double>0};
+  const owned={rapid:P.inv_rapid>0,double:P.inv_double>0};
+  if(owned.rapid){buffs.rapid=60;rpc('use_powerup',{p_kind:'rapid'})}
   if(owned.double){buffs.double=1;rpc('use_powerup',{p_kind:'double'})}
   beginStage(1);
   updateHUD();
@@ -753,17 +756,20 @@ function update(dt){
   if(effects.boost>0&&Math.random()<.6)particles.push({x:player.x+(Math.random()*20-10),y:player.y+player.r,vx:0,vy:2.2,life:14,color:'#7be495',r:2});
   let fxActive=false;
   for(const k of['sidegun','slow','boost','autofire']){if(effects[k]>0){effects[k]=Math.max(0,effects[k]-dt/60);fxActive=true}}
+  if(buffs.rapid>0){buffs.rapid=Math.max(0,buffs.rapid-dt/60);fxActive=true}
   if(fxActive){
-    const sig=Math.ceil(effects.sidegun)+'/'+Math.ceil(effects.slow)+'/'+Math.ceil(effects.boost)+'/'+Math.ceil(effects.autofire);
+    const sig=Math.ceil(effects.sidegun)+'/'+Math.ceil(effects.slow)+'/'+Math.ceil(effects.boost)+'/'+Math.ceil(effects.autofire)+'/'+Math.ceil(buffs.rapid);
     if(sig!==hudSig){hudSig=sig;updateHUD()}
   }
-  // Fire control (owner's rulings, 2026-11-02 — superseding the 2026-10-31 auto-fire-always
-  // build): normal play is TAP TO SHOOT — each tap fires one volley (canvas pointerdown
-  // handler below); sliding never fires. The ONLY auto-fire in the game is the Stage 8/9
-  // AUTO-FIRE pickup: while effects.autofire runs down (~10s) the guns fire on the stage
-  // power curve (fireCd carries fractional intervals so the average rate matches
-  // fireIntervalFor(stage)); when it expires, tap-to-shoot resumes.
-  if(effects.autofire>0){fireCd-=dt;while(fireCd<=0){fireGuns();fireCd+=fireIntervalFor(stage)}}
+  // Fire control (owner's rulings, 2026-11-02, clarified evening of 2026-11-02): normal
+  // play is TAP TO SHOOT — each tap fires one volley (canvas pointerdown handler below);
+  // sliding never fires. Auto-fire reaches a player exactly two ways: (1) EARNED — the
+  // Stage 8/9 AUTO-FIRE pickup (effects.autofire, ~10s); (2) PURCHASED — the Armory's
+  // Rapid Fire (buffs.rapid, 60s, armed at run start), the early-access buy the 8/9 gate
+  // makes worth wanting. While either timer runs, the guns fire on the stage power
+  // curve (fireCd carries fractional intervals so the average rate matches
+  // fireIntervalFor(stage)); when both expire, tap-to-shoot resumes.
+  if(effects.autofire>0||buffs.rapid>0){fireCd-=dt;while(fireCd<=0){fireGuns();fireCd+=fireIntervalFor(stage)}}
   else fireCd=0;
   if(stagePhase==='main'){
     stageElapsed+=dt/60;
@@ -1062,6 +1068,5 @@ $('retry').onclick=boot;
 $('pauseBtn').addEventListener('click',e=>{e.stopPropagation();if(state!=='playing')return;paused=!paused;$('pauseBtn').textContent=paused?'▶ Resume':'⏸ Pause';});
 resize();requestAnimationFrame(loop);boot();
 </script>
-<script data-goatcounter="https://dgireahia.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
