@@ -11,8 +11,8 @@
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 .hidden{display:none!important}
 .screen{padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px)) !important}
-  body{font-family:Georgia,serif;background:#0a1a12;color:#f4ecd8;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
-#game{position:relative;width:100vw;height:100vh;max-width:500px;max-height:900px;background:#0d1f17;overflow:hidden}
+  body{font-family:Georgia,serif;background:#0a1a12;color:#f4ecd8;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
+#game{position:relative;width:100vw;height:100vh;height:100dvh;max-width:500px;max-height:900px;background:#0d1f17;overflow:hidden}
 canvas{display:block;width:100%;height:100%}
 /* Combat HUD lives in the bottom band (Doobie's ruling, 2026-10-28 ~14:37): during a
    fight, NOTHING informational sits in the fight area — the whole HUD (points, hearts,
@@ -21,8 +21,8 @@ canvas{display:block;width:100%;height:100%}
 #hud{position:absolute;bottom:0;left:0;right:0;padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:flex-end;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#d4af37;z-index:10;pointer-events:none;background:rgba(10,26,18,.78);border-top:1px solid rgba(212,175,55,.35)}
 #hud .l,#hud .r{display:flex;flex-direction:column;gap:3px}#hud .r{text-align:right}
 .val{color:#f4ecd8;font-size:17px;font-weight:bold}
-#hearts{font-size:17px;letter-spacing:2px;color:#c0392b}
-#powerStatus{position:absolute;left:14px;bottom:calc(62px + env(safe-area-inset-bottom,0px));font-size:10px;color:#7ba894;letter-spacing:1px;text-transform:uppercase;z-index:10;pointer-events:none}
+#hearts{font-size:24px;letter-spacing:3px;color:#ff5040;text-shadow:0 0 7px rgba(255,60,40,.6);vertical-align:-3px}
+#powerStatus{position:absolute;left:14px;bottom:calc(92px + env(safe-area-inset-bottom,0px));font-size:10px;color:#7ba894;letter-spacing:1px;text-transform:uppercase;z-index:10;pointer-events:none}
 .screen{position:absolute;inset:0;background:rgba(10,26,18,.98);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;text-align:center;z-index:20;overflow-y:auto}
 .screen::before,.screen::after{content:"";margin:auto}
 h1{font-size:28px;color:#d4af37;margin-bottom:6px;letter-spacing:3px}
@@ -53,7 +53,7 @@ h2{font-size:13px;color:#7ba894;margin-bottom:20px;letter-spacing:2px;text-trans
 .bar{width:100%;height:8px;background:#142a1e;border-radius:4px;overflow:hidden;margin:10px 0 4px;border:1px solid #2a4a38}
 .fill{height:100%;background:linear-gradient(90deg,#7ba894,#d4af37);transition:width .4s}
 input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #2a4a38;background:#142a1e;color:#f4ecd8;font-family:inherit;font-size:14px}
-#toast{position:absolute;left:14px;bottom:calc(86px + env(safe-area-inset-bottom,0px));background:rgba(10,26,18,.95);border:1px solid #d4af37;padding:9px 13px;border-radius:9px;font-size:12px;text-align:left;z-index:30;opacity:0;transition:opacity .3s;pointer-events:none;max-width:230px;line-height:1.45}
+#toast{position:absolute;left:14px;bottom:calc(118px + env(safe-area-inset-bottom,0px));background:rgba(10,26,18,.95);border:1px solid #d4af37;padding:9px 13px;border-radius:9px;font-size:12px;text-align:left;z-index:30;opacity:0;transition:opacity .3s;pointer-events:none;max-width:230px;line-height:1.45}
 #toast.show{opacity:1}
 #pauseBtn{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:10px;z-index:40;background:rgba(10,26,18,.92);border:1px solid #d4af37;color:#f3d27a;font-size:15px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;display:none;-webkit-tap-highlight-color:transparent}
 #pauseBtn.show{display:block}
@@ -83,7 +83,7 @@ input,select{width:290px;padding:12px;margin:6px 0;border-radius:8px;border:1px 
 <div id="game">
 <canvas id="c"></canvas>
 <div id="hud">
-  <div class="l"><div>Points <span class="val" id="points">0</span> <span id="hearts">♥♥♥</span></div><div id="stageProg" style="font-size:10px;color:#7ba894"></div></div>
+  <div class="l"><div>Points <span class="val" id="points">0</span></div><div>Men <span id="hearts">♥♥♥</span> <span class="val" id="livesNum">3</span> left</div><div id="stageProg" style="font-size:10px;color:#7ba894"></div></div>
   <div class="r"><div>Balance <span class="val" id="balance">$0.00</span> · Stage <span class="val" id="stageNow">1</span></div><div style="font-size:9px">1000 pts = $1 · <span id="sndBtn" style="cursor:pointer;font-size:11px;color:#d4af37">🔊 Sound on</span></div></div>
 </div>
 <div id="powerStatus"></div>
@@ -351,6 +351,7 @@ function updateHUD(){
   $('points').textContent=score;
   $('balance').textContent='$'+usd(P.points+(state==='playing'?score:0));
   $('hearts').textContent='♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,3-lives));
+  const ln=$('livesNum');if(ln)ln.textContent=Math.max(0,lives);
   const a=[];
   if(effects.autofire>0)a.push('AUTO-FIRE '+Math.ceil(effects.autofire)+'s');
   if(buffs.rapid>0)a.push('RAPID '+Math.ceil(buffs.rapid)+'s');
